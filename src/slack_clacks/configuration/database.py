@@ -15,9 +15,12 @@ from sqlalchemy.orm import Session, sessionmaker
 from slack_clacks.configuration.models import Base
 
 
-def get_config_dir() -> Path:
+def get_config_dir(config_dir: str | Path | None = None) -> Path:
     """Get the clacks configuration directory path."""
-    config_dir = Path(user_config_dir("slack-clacks"))
+    if config_dir is None:
+        config_dir = Path(user_config_dir("slack-clacks"))
+    else:
+        config_dir = Path(config_dir)
     config_dir.mkdir(parents=True, exist_ok=True)
     return config_dir
 
