@@ -17,6 +17,9 @@ def resolve_channel_id(client: WebClient, channel_identifier: str) -> str | None
 
     channel_name = channel_identifier.lstrip("#")
 
+    # TODO: Implement pagination via response_metadata.next_cursor
+    # Currently only searches first page (up to 1000 channels)
+    # Plan: Cache channel list in database to avoid repeated API calls
     try:
         response = client.conversations_list(
             types="public_channel,private_channel", limit=1000
@@ -41,6 +44,9 @@ def resolve_user_id(client: WebClient, user_identifier: str) -> str | None:
 
     username = user_identifier.lstrip("@")
 
+    # TODO: Implement pagination via response_metadata.next_cursor
+    # Currently only searches first page (100-200 users depending on tier)
+    # Plan: Cache user list in database to avoid repeated API calls
     try:
         response = client.users_list()
         for user in response["members"]:
