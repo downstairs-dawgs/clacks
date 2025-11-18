@@ -57,7 +57,12 @@ def handle_login(args: argparse.Namespace) -> None:
 
         set_current_context(session, context_name)
 
-    output = {"status": "success", "context": context_name, "action": action}
+    output = {
+        "context": context_name,
+        "action": action,
+        "user_id": credentials["user_id"],
+        "workspace_id": credentials["workspace_id"],
+    }
     with args.outfile as ofp:
         json.dump(output, ofp)
 
@@ -147,13 +152,12 @@ def handle_logout(args: argparse.Namespace) -> None:
                 raise ValueError("No active authentication context.")
 
         client = WebClient(token=context.access_token)
-        client.auth_revoke()
+        response = client.auth_revoke()
 
         delete_context(session, context.name)
 
-    output = {"status": "success", "context": context.name}
     with args.outfile as ofp:
-        json.dump(output, ofp)
+        json.dump(response.data, ofp)
 
 
 def generate_cli() -> argparse.ArgumentParser:
