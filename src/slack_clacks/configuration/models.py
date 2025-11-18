@@ -3,9 +3,8 @@ SQLAlchemy models for slack-clacks configuration database.
 """
 
 from datetime import datetime
-from typing import Optional
 
-from sqlalchemy import String, DateTime
+from sqlalchemy import DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -18,20 +17,16 @@ class Context(Base):
 
     name: Mapped[str] = mapped_column(String, primary_key=True)
     access_token: Mapped[str] = mapped_column(String, nullable=False)
-    user_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    user_email: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    workspace_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    workspace_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=datetime.utcnow
+    user_id: Mapped[str] = mapped_column(String, nullable=False)
+    workspace_id: Mapped[str] = mapped_column(String, nullable=False)
+
+
+class CurrentContext(Base):
+    __tablename__ = "current_context"
+
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime, primary_key=True, default=datetime.utcnow
     )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
+    context_name: Mapped[str] = mapped_column(
+        String, ForeignKey("contexts.name", ondelete="CASCADE"), nullable=False
     )
-
-
-class Setting(Base):
-    __tablename__ = "settings"
-
-    key: Mapped[str] = mapped_column(String, primary_key=True)
-    value: Mapped[str] = mapped_column(String, nullable=False)

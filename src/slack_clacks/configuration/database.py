@@ -25,19 +25,23 @@ def get_config_dir(config_dir: str | Path | None = None) -> Path:
     return config_dir
 
 
-def get_db_path() -> Path:
+def get_db_path(config_dir: str | Path | None = None, as_url: bool = False) -> str:
     """Get the path to the SQLite database file."""
-    return get_config_dir() / "config.sqlite"
+    db_path = get_config_dir(config_dir) / "config.sqlite"
+    if as_url:
+        return f"sqlite:///{db_path}"
+    return str(db_path)
 
 
-def get_engine():
+def get_engine(config_dir: str | Path | None = None):
     """Create and return a SQLAlchemy engine for the config database."""
-    db_path = get_db_path()
-    db_url = f"sqlite:///{db_path}"
+    db_url = get_db_path(config_dir=config_dir, as_url=True)
     return create_engine(db_url, echo=False)
 
 
-def get_session() -> Generator[Session, None, None]:
+def get_session(
+    config_dir: str | Path | None = None,
+) -> Generator[Session, None, None]:
     """
     Get a database session.
 
@@ -46,7 +50,7 @@ def get_session() -> Generator[Session, None, None]:
             # Use session
             pass
     """
-    engine = get_engine()
+    engine = get_engine(config_dir=config_dir)
     SessionLocal = sessionmaker(bind=engine)
     session = SessionLocal()
     try:
@@ -73,8 +77,7 @@ def run_migrations() -> None:
     """
     Run Alembic migrations programmatically to upgrade the database to the latest version.
     """
-    db_path = get_db_path()
-    db_url = f"sqlite:///{db_path}"
+    db_url = get_db_path(as_url=True)
 
     alembic_cfg = Config()
 
@@ -92,7 +95,7 @@ def ensure_db_initialized() -> None:
     Ensure the database is initialized and up-to-date.
     Creates the database if it doesn't exist, then runs migrations.
     """
-    db_path = get_db_path()
+    db_path = Path(get_db_path())
 
     if not db_path.exists():
         init_db()

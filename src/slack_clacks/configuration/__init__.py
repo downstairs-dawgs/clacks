@@ -8,7 +8,7 @@ This module handles:
 - CRUD operations for context management
 """
 
-from slack_clacks.configuration.models import Context, Setting
+from slack_clacks.configuration.models import Context, CurrentContext
 from slack_clacks.configuration.database import (
     get_db_path,
     init_db,
@@ -18,7 +18,7 @@ from slack_clacks.configuration.database import (
 
 __all__ = [
     "Context",
-    "Setting",
+    "CurrentContext",
     "get_db_path",
     "init_db",
     "run_migrations",
