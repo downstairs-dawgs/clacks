@@ -94,12 +94,12 @@ def run_migrations(connection: Connection) -> None:
     command.upgrade(alembic_cfg, "head")
 
 
-def ensure_db_initialized() -> None:
+def ensure_db_initialized(config_dir: str | Path | None = None) -> None:
     """
     Ensure the database is initialized and up-to-date.
     Runs migrations to create or upgrade the database schema.
     """
-    engine = get_engine()
+    engine = get_engine(config_dir=config_dir)
     with engine.connect() as connection:
         run_migrations(connection)
 
