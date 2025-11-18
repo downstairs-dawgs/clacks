@@ -79,16 +79,6 @@ def get_session(
         session.close()
 
 
-def init_db(config_dir: str | Path | None = None) -> None:
-    """
-    Initialize the database by creating all tables.
-    This should only be used for initial setup or testing.
-    In production, use run_migrations() instead.
-    """
-    engine = get_engine(config_dir=config_dir)
-    Base.metadata.create_all(engine)
-
-
 def run_migrations(connection: Connection) -> None:
     """
     Run Alembic migrations programmatically to upgrade the database to the latest version.
@@ -107,13 +97,8 @@ def run_migrations(connection: Connection) -> None:
 def ensure_db_initialized() -> None:
     """
     Ensure the database is initialized and up-to-date.
-    Creates the database if it doesn't exist, then runs migrations.
+    Runs migrations to create or upgrade the database schema.
     """
-    db_path = Path(get_db_path())
-
-    if not db_path.exists():
-        init_db()
-
     engine = get_engine()
     with engine.connect() as connection:
         run_migrations(connection)

@@ -11,7 +11,6 @@ This module handles:
 from slack_clacks.configuration.models import Context, CurrentContext
 from slack_clacks.configuration.database import (
     get_db_path,
-    init_db,
     run_migrations,
     get_session,
 )
@@ -20,7 +19,6 @@ __all__ = [
     "Context",
     "CurrentContext",
     "get_db_path",
-    "init_db",
     "run_migrations",
     "get_session",
 ]
