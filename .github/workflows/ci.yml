@@ -24,8 +24,11 @@ jobs:
     - name: Install dependencies
       run: uv sync
 
-    - name: Run black
-      run: uv run black --check src/slack_clacks/ tests/
+    - name: Run ruff format
+      run: uv run ruff format --check src/slack_clacks/ tests/
+
+    - name: Run ruff check
+      run: uv run ruff check src/slack_clacks/ tests/
 
     - name: Run mypy
       run: uv run mypy src/slack_clacks/ tests/
