@@ -210,3 +210,6 @@ __marimo__/
 scratch/
 .secrets/
 .claude/
+
+# Alembic
+alembic.ini
