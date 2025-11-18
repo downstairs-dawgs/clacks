@@ -8,11 +8,14 @@ CLIENT_ID = "9938573476978.9935591662693"
 CLIENT_SECRET = "cd914f918c2e8b802ebfbd4625e6dde6"
 
 DEFAULT_USER_SCOPES = [
-    "chat:write",
+    "channels:history",
     "channels:read",
     "channels:write",
+    "chat:write",
     "files:read",
     "files:write",
+    "groups:history",
+    "groups:read",
     "im:history",
     "im:read",
     "im:write",
