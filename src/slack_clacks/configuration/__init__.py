@@ -7,18 +7,3 @@ This module handles:
 - Database initialization and migrations via Alembic
 - CRUD operations for context management
 """
-
-from slack_clacks.configuration.models import Context, CurrentContext
-from slack_clacks.configuration.database import (
-    get_db_path,
-    run_migrations,
-    get_session,
-)
-
-__all__ = [
-    "Context",
-    "CurrentContext",
-    "get_db_path",
-    "run_migrations",
-    "get_session",
-]
