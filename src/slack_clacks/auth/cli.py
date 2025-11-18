@@ -2,6 +2,7 @@ import argparse
 
 from slack_clacks.configuration.database import (
     add_context,
+    ensure_db_initialized,
     get_context,
     get_session,
     set_current_context,
@@ -14,6 +15,7 @@ from .oauth import start_oauth_flow
 
 def handle_login(args: argparse.Namespace) -> None:
     try:
+        ensure_db_initialized(config_dir=args.config_dir)
         credentials = start_oauth_flow(config_dir=args.config_dir)
 
         context_name = args.context
