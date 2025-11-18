@@ -85,3 +85,56 @@ def send_message(
     Returns the Slack API response.
     """
     return client.chat_postMessage(channel=channel, text=text, thread_ts=thread_ts)
+
+
+def read_messages(
+    client: WebClient,
+    channel: str,
+    limit: int = 20,
+    latest: str | None = None,
+    oldest: str | None = None,
+):
+    """
+    Read messages from a channel or DM.
+    Returns the Slack API response with messages.
+    """
+    return client.conversations_history(
+        channel=channel, limit=limit, latest=latest, oldest=oldest, inclusive=True
+    )
+
+
+def read_thread(client: WebClient, channel: str, thread_ts: str, limit: int = 100):
+    """
+    Read messages from a thread.
+    Returns the Slack API response with thread replies.
+    """
+    return client.conversations_replies(channel=channel, ts=thread_ts, limit=limit)
+
+
+def get_recent_activity(
+    client: WebClient, conversation_limit: int = 100, message_limit: int = 20
+):
+    """
+    Get recent messages across all user's conversations.
+    Returns a list of messages with their conversation context, sorted by timestamp.
+    """
+    conversations_response = client.users_conversations(
+        types="public_channel,private_channel,mpim,im", limit=conversation_limit
+    )
+
+    all_messages = []
+    for channel in conversations_response["channels"]:
+        try:
+            history_response = client.conversations_history(
+                channel=channel["id"], limit=1
+            )
+            if history_response["messages"]:
+                for message in history_response["messages"]:
+                    message["channel_id"] = channel["id"]
+                    message["channel_name"] = channel.get("name", channel["id"])
+                    all_messages.append(message)
+        except Exception:
+            continue
+
+    all_messages.sort(key=lambda m: float(m.get("ts", 0)), reverse=True)
+    return all_messages[:message_limit]
