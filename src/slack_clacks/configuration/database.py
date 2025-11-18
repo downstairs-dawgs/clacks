@@ -9,7 +9,7 @@ from typing import Generator
 from alembic import command
 from alembic.config import Config
 from platformdirs import user_config_dir
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, Connection
 from sqlalchemy.orm import Session, sessionmaker
 
 from slack_clacks.configuration.models import Base
@@ -27,10 +27,16 @@ def get_config_dir(config_dir: str | Path | None = None) -> Path:
 
 def get_db_path(config_dir: str | Path | None = None, as_url: bool = False) -> str:
     """Get the path to the SQLite database file."""
-    db_path = get_config_dir(config_dir) / "config.sqlite"
+    if isinstance(config_dir, str) and (
+        config_dir == ":memory:" or config_dir.startswith("file::memory:")
+    ):
+        db_path = config_dir
+    else:
+        db_path = str(get_config_dir(config_dir) / "config.sqlite")
+
     if as_url:
         return f"sqlite:///{db_path}"
-    return str(db_path)
+    return db_path
 
 
 def get_engine(config_dir: str | Path | None = None):
@@ -63,29 +69,27 @@ def get_session(
         session.close()
 
 
-def init_db() -> None:
+def init_db(config_dir: str | Path | None = None) -> None:
     """
     Initialize the database by creating all tables.
     This should only be used for initial setup or testing.
     In production, use run_migrations() instead.
     """
-    engine = get_engine()
+    engine = get_engine(config_dir=config_dir)
     Base.metadata.create_all(engine)
 
 
-def run_migrations() -> None:
+def run_migrations(connection: Connection) -> None:
     """
     Run Alembic migrations programmatically to upgrade the database to the latest version.
     """
-    db_url = get_db_path(as_url=True)
-
     alembic_cfg = Config()
 
     config_module_dir = Path(__file__).parent
     alembic_dir = config_module_dir.parent / "alembic"
 
     alembic_cfg.set_main_option("script_location", str(alembic_dir))
-    alembic_cfg.set_main_option("sqlalchemy.url", db_url)
+    alembic_cfg.attributes["connection"] = connection
 
     command.upgrade(alembic_cfg, "head")
 
@@ -100,4 +104,6 @@ def ensure_db_initialized() -> None:
     if not db_path.exists():
         init_db()
 
-    run_migrations()
+    engine = get_engine()
+    with engine.connect() as connection:
+        run_migrations(connection)

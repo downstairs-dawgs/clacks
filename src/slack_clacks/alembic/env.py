@@ -56,15 +56,15 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    from slack_clacks.configuration.database import get_engine
+    connectable = config.attributes.get("connection", None)
 
-    connectable = get_engine()
+    if connectable is None:
+        raise RuntimeError("No connection provided to run_migrations")
 
-    with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+    context.configure(connection=connectable, target_metadata=target_metadata)
 
-        with context.begin_transaction():
-            context.run_migrations()
+    with context.begin_transaction():
+        context.run_migrations()
 
 
 if context.is_offline_mode():
