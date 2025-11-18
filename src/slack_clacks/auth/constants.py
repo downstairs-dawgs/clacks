@@ -19,4 +19,7 @@ DEFAULT_USER_SCOPES = [
     "reactions:read",
     "reactions:write",
     "search:read",
+    "team:read",
+    "users:read",
+    "users:read.email",
 ]
