@@ -4,7 +4,7 @@ from pathlib import Path
 from sqlalchemy import text
 
 from slack_clacks.configuration.database import (
-    ensure_db_initialized,
+    ensure_db_updated,
     get_config_dir,
     get_db_path,
     get_session,
@@ -13,7 +13,7 @@ from slack_clacks.configuration.database import (
 
 def handle_init(args: argparse.Namespace) -> None:
     config_dir = args.config_dir
-    ensure_db_initialized(config_dir=config_dir)
+    ensure_db_updated(config_dir=config_dir)
     actual_dir = get_config_dir(config_dir)
     print(f"Initialized configuration database at {actual_dir}")
 
