@@ -12,7 +12,7 @@ from platformdirs import user_config_dir
 from sqlalchemy import create_engine, Connection
 from sqlalchemy.orm import Session, sessionmaker
 
-from slack_clacks.configuration.models import Base
+from slack_clacks.configuration.models import Base, Context, CurrentContext
 
 
 def get_config_dir(config_dir: str | Path | None = None) -> Path:
@@ -41,8 +41,18 @@ def get_db_path(config_dir: str | Path | None = None, as_url: bool = False) -> s
 
 def get_engine(config_dir: str | Path | None = None):
     """Create and return a SQLAlchemy engine for the config database."""
+    from sqlalchemy import event
+
     db_url = get_db_path(config_dir=config_dir, as_url=True)
-    return create_engine(db_url, echo=False)
+    engine = create_engine(db_url, echo=False)
+
+    @event.listens_for(engine, "connect")
+    def set_sqlite_pragma(dbapi_conn, connection_record):
+        cursor = dbapi_conn.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
+    return engine
 
 
 def get_session(
@@ -107,3 +117,30 @@ def ensure_db_initialized() -> None:
     engine = get_engine()
     with engine.connect() as connection:
         run_migrations(connection)
+
+
+def add_context(
+    session: Session, name: str, access_token: str, user_id: str, workspace_id: str
+) -> Context:
+    """Add a new context to the database."""
+    context = Context(
+        name=name,
+        access_token=access_token,
+        user_id=user_id,
+        workspace_id=workspace_id,
+    )
+    session.add(context)
+    session.flush()
+    return context
+
+
+def set_current_context(session: Session, context_name: str) -> CurrentContext:
+    """Set the current context by adding an entry to current_context history."""
+    from datetime import datetime, UTC
+
+    current_context = CurrentContext(
+        timestamp=datetime.now(UTC), context_name=context_name
+    )
+    session.add(current_context)
+    session.flush()
+    return current_context
