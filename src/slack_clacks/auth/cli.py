@@ -1,12 +1,13 @@
 import argparse
 
-from ..configuration.database import (
+from slack_clacks.configuration.database import (
     add_context,
     get_context,
     get_session,
     set_current_context,
     update_context,
 )
+
 from .cert import generate_self_signed_cert, get_cert_info
 from .oauth import start_oauth_flow
 
@@ -60,7 +61,7 @@ def handle_login(args: argparse.Namespace) -> None:
 def handle_cert_generate(args: argparse.Namespace) -> None:
     try:
         cert_path, key_path = generate_self_signed_cert(args.config_dir)
-        print(f"Generated new self-signed certificate:")
+        print("Generated new self-signed certificate:")
         print(f"  Certificate: {cert_path}")
         print(f"  Private key: {key_path}")
     except Exception as e:
@@ -74,7 +75,7 @@ def handle_cert_info(args: argparse.Namespace) -> None:
         print("No certificate found. Generate one with: clacks auth cert generate")
         raise SystemExit(1)
 
-    print(f"Certificate information:")
+    print("Certificate information:")
     print(f"  Subject: {cert_info['subject']}")
     print(f"  Valid from: {cert_info['not_valid_before']}")
     print(f"  Valid until: {cert_info['not_valid_after']}")

@@ -24,6 +24,22 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
-    "black>=25.11.0",
     "mypy>=1.18.2",
+    "ruff>=0.8.4",
 ]
+
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort (import sorting)
+    "TID252", # ban relative imports
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["slack_clacks"]

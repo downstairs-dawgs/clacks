@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from ipaddress import IPv4Address
 from pathlib import Path
 
@@ -8,7 +8,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
 
-from ..configuration.database import get_config_dir
+from slack_clacks.configuration.database import get_config_dir
 
 
 def get_cert_paths(config_dir: str | Path | None = None) -> tuple[Path, Path]:

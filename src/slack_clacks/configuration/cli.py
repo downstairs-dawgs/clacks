@@ -29,7 +29,8 @@ def handle_info(args: argparse.Namespace) -> None:
         with get_session(args.config_dir) as session:
             result = session.execute(
                 text(
-                    "SELECT context_name FROM current_context ORDER BY timestamp DESC LIMIT 1"
+                    "SELECT context_name FROM current_context "
+                    "ORDER BY timestamp DESC LIMIT 1"
                 )
             ).fetchone()
 

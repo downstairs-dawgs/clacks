@@ -2,7 +2,6 @@
 Database initialization and management utilities.
 """
 
-import os
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Generator
@@ -10,10 +9,10 @@ from typing import Generator
 from alembic import command
 from alembic.config import Config
 from platformdirs import user_config_dir
-from sqlalchemy import create_engine, Connection
+from sqlalchemy import Connection, create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from slack_clacks.configuration.models import Base, Context, CurrentContext
+from slack_clacks.configuration.models import Context, CurrentContext
 
 
 def get_config_dir(config_dir: str | Path | None = None) -> Path:
@@ -83,7 +82,8 @@ def get_session(
 
 def run_migrations(connection: Connection) -> None:
     """
-    Run Alembic migrations programmatically to upgrade the database to the latest version.
+    Run Alembic migrations programmatically to upgrade the database to the
+    latest version.
     """
     alembic_cfg = Config()
 
@@ -143,7 +143,7 @@ def get_context(session: Session, name: str) -> Context | None:
 
 def set_current_context(session: Session, context_name: str) -> CurrentContext:
     """Set the current context by adding an entry to current_context history."""
-    from datetime import datetime, UTC
+    from datetime import UTC, datetime
 
     current_context = CurrentContext(
         timestamp=datetime.now(UTC), context_name=context_name

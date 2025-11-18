@@ -85,10 +85,10 @@ def start_oauth_flow(
 
         ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         ssl_context.load_cert_chain(certfile=cert_path, keyfile=key_path)
-        print(f"SSL context created")
+        print("SSL context created")
 
         httpd.socket = ssl_context.wrap_socket(httpd.socket, server_side=True)
-        print(f"HTTPS server ready and listening")
+        print("HTTPS server ready and listening")
     except Exception as e:
         print(f"Failed to start HTTPS server: {e}")
         raise
@@ -100,12 +100,11 @@ def start_oauth_flow(
     server_thread.daemon = True
     server_thread.start()
 
-    print(f"Opening browser for Slack authentication...")
+    print("Opening browser for Slack authentication...")
     print(f"If the browser doesn't open, visit: {auth_url}")
     webbrowser.open(auth_url)
 
     timeout = 300
-    start_time = threading.Event()
     for _ in range(timeout * 10):
         if OAuthCallbackHandler.authorization_code or OAuthCallbackHandler.error:
             break
