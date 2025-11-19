@@ -4,6 +4,7 @@ import sys
 
 from slack_sdk import WebClient
 
+from slack_clacks.auth.validation import get_scopes_for_mode, validate
 from slack_clacks.configuration.database import (
     ensure_db_updated,
     get_current_context,
@@ -120,6 +121,13 @@ def handle_read(args: argparse.Namespace) -> None:
             channel_id = resolve_channel_id(client, args.channel)
             if channel_id is None:
                 raise ValueError(f"Channel '{args.channel}' not found.")
+
+            scopes = get_scopes_for_mode(context.app_type)
+            if channel_id.startswith("C"):
+                validate("channels:history", scopes, raise_on_error=True)
+            elif channel_id.startswith("G"):
+                validate("groups:history", scopes, raise_on_error=True)
+
         elif args.user:
             user_id = resolve_user_id(client, args.user)
             if user_id is None:
@@ -207,6 +215,15 @@ def handle_recent(args: argparse.Namespace) -> None:
         if context is None:
             raise ValueError(
                 "No active authentication context. Authenticate with: clacks auth login"
+            )
+
+        scopes = get_scopes_for_mode(context.app_type)
+        if not validate("channels:history", scopes):
+            print(
+                "Warning: clacks-lite mode only shows recent DM/MPIM activity. "
+                "For full conversation history, re-authenticate with: "
+                "clacks auth login --mode clacks",
+                file=sys.stderr,
             )
 
         client = WebClient(token=context.access_token)
