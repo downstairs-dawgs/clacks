@@ -218,13 +218,7 @@ def handle_recent(args: argparse.Namespace) -> None:
             )
 
         scopes = get_scopes_for_mode(context.app_type)
-        if not validate("channels:history", scopes):
-            print(
-                "Warning: clacks-lite mode only shows recent DM/MPIM activity. "
-                "For full conversation history, re-authenticate with: "
-                "clacks auth login --mode clacks",
-                file=sys.stderr,
-            )
+        validate("channels:history", scopes, raise_on_error=True)
 
         client = WebClient(token=context.access_token)
 
