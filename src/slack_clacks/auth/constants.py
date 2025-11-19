@@ -35,3 +35,18 @@ DEFAULT_USER_SCOPES = [
     "users:read",
     "users:read.email",
 ]
+
+LITE_USER_SCOPES = [
+    "channels:read",
+    "chat:write",
+    "im:history",
+    "im:read",
+    "im:write",
+    "mpim:history",
+    "mpim:read",
+    "mpim:write",
+    "reactions:read",
+    "reactions:write",
+    "users:read",
+    "users:read.email",
+]

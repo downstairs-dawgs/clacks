@@ -17,6 +17,7 @@ from slack_clacks.auth.constants import (
     DEFAULT_USER_SCOPES,
     LITE_CLIENT_ID,
     LITE_CLIENT_SECRET,
+    LITE_USER_SCOPES,
     MODE_CLACKS,
     MODE_CLACKS_LITE,
     OAUTH_PORT,
@@ -81,7 +82,7 @@ def start_oauth_flow(
     mode: str = MODE_CLACKS,
 ) -> Dict[str, str]:
     if scopes is None:
-        scopes = DEFAULT_USER_SCOPES
+        scopes = LITE_USER_SCOPES if mode == MODE_CLACKS_LITE else DEFAULT_USER_SCOPES
 
     client_id = LITE_CLIENT_ID if mode == MODE_CLACKS_LITE else CLIENT_ID
     client_secret = LITE_CLIENT_SECRET if mode == MODE_CLACKS_LITE else CLIENT_SECRET
