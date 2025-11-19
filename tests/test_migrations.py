@@ -22,7 +22,8 @@ class TestMigrations(unittest.TestCase):
                 col["name"] for col in inspector.get_columns("contexts")
             }
             self.assertEqual(
-                contexts_columns, {"name", "access_token", "user_id", "workspace_id"}
+                contexts_columns,
+                {"name", "access_token", "user_id", "workspace_id", "app_type"},
             )
 
             current_context_columns = {

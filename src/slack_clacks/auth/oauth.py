@@ -15,6 +15,11 @@ from slack_clacks.auth.constants import (
     CLIENT_ID,
     CLIENT_SECRET,
     DEFAULT_USER_SCOPES,
+    LITE_CLIENT_ID,
+    LITE_CLIENT_SECRET,
+    LITE_USER_SCOPES,
+    MODE_CLACKS,
+    MODE_CLACKS_LITE,
     OAUTH_PORT,
     REDIRECT_URI,
 )
@@ -72,17 +77,22 @@ class OAuthCallbackHandler(http.server.BaseHTTPRequestHandler):
 
 
 def start_oauth_flow(
-    scopes: Optional[list] = None, config_dir: str | Path | None = None
+    scopes: Optional[list] = None,
+    config_dir: str | Path | None = None,
+    mode: str = MODE_CLACKS,
 ) -> Dict[str, str]:
     if scopes is None:
-        scopes = DEFAULT_USER_SCOPES
+        scopes = LITE_USER_SCOPES if mode == MODE_CLACKS_LITE else DEFAULT_USER_SCOPES
+
+    client_id = LITE_CLIENT_ID if mode == MODE_CLACKS_LITE else CLIENT_ID
+    client_secret = LITE_CLIENT_SECRET if mode == MODE_CLACKS_LITE else CLIENT_SECRET
 
     scope_string = ",".join(scopes)
     state = secrets.token_urlsafe(32)
 
     auth_url = (
         f"https://slack.com/oauth/v2/authorize?"
-        f"client_id={CLIENT_ID}&"
+        f"client_id={client_id}&"
         f"user_scope={urllib.parse.quote(scope_string)}&"
         f"redirect_uri={urllib.parse.quote(REDIRECT_URI)}&"
         f"state={urllib.parse.quote(state)}"
@@ -141,8 +151,8 @@ def start_oauth_flow(
     client = WebClient()
     try:
         response = client.oauth_v2_access(
-            client_id=CLIENT_ID,
-            client_secret=CLIENT_SECRET,
+            client_id=client_id,
+            client_secret=client_secret,
             code=authorization_code,
             redirect_uri=REDIRECT_URI,
         )
@@ -151,6 +161,7 @@ def start_oauth_flow(
             "access_token": response["authed_user"]["access_token"],
             "user_id": response["authed_user"]["id"],
             "workspace_id": response["team"]["id"],
+            "app_type": mode,
         }
     except SlackApiError as e:
         raise Exception(f"Failed to exchange authorization code: {e.response['error']}")

@@ -30,6 +30,7 @@ class TestContextOperations(unittest.TestCase):
                 access_token="xoxp-test-token",
                 user_id="U123456",
                 workspace_id="T123456",
+                app_type="clacks",
             )
             session.commit()
 
@@ -37,6 +38,7 @@ class TestContextOperations(unittest.TestCase):
             self.assertEqual(context.access_token, "xoxp-test-token")
             self.assertEqual(context.user_id, "U123456")
             self.assertEqual(context.workspace_id, "T123456")
+            self.assertEqual(context.app_type, "clacks")
 
         with Session(self.engine) as session:
             result = session.execute(
@@ -54,6 +56,7 @@ class TestContextOperations(unittest.TestCase):
                 access_token="token1",
                 user_id="U1",
                 workspace_id="T1",
+                app_type="clacks",
             )
             session.commit()
 
@@ -69,10 +72,20 @@ class TestContextOperations(unittest.TestCase):
 
         with Session(self.engine) as session:
             add_context(
-                session, name="ctx1", access_token="t1", user_id="U1", workspace_id="T1"
+                session,
+                name="ctx1",
+                access_token="t1",
+                user_id="U1",
+                workspace_id="T1",
+                app_type="clacks",
             )
             add_context(
-                session, name="ctx2", access_token="t2", user_id="U2", workspace_id="T2"
+                session,
+                name="ctx2",
+                access_token="t2",
+                user_id="U2",
+                workspace_id="T2",
+                app_type="clacks",
             )
             session.commit()
 
@@ -103,10 +116,20 @@ class TestContextOperations(unittest.TestCase):
 
         with Session(self.engine) as session:
             add_context(
-                session, name="ctx1", access_token="t1", user_id="U1", workspace_id="T1"
+                session,
+                name="ctx1",
+                access_token="t1",
+                user_id="U1",
+                workspace_id="T1",
+                app_type="clacks",
             )
             add_context(
-                session, name="ctx2", access_token="t2", user_id="U2", workspace_id="T2"
+                session,
+                name="ctx2",
+                access_token="t2",
+                user_id="U2",
+                workspace_id="T2",
+                app_type="clacks",
             )
             session.commit()
 

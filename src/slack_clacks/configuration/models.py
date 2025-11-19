@@ -19,6 +19,7 @@ class Context(Base):
     access_token: Mapped[str] = mapped_column(String, nullable=False)
     user_id: Mapped[str] = mapped_column(String, nullable=False)
     workspace_id: Mapped[str] = mapped_column(String, nullable=False)
+    app_type: Mapped[str] = mapped_column(String, nullable=False)
 
 
 class CurrentContext(Base):

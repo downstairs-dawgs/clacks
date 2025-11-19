@@ -107,7 +107,12 @@ def ensure_db_updated(config_dir: str | Path | None = None) -> None:
 
 
 def add_context(
-    session: Session, name: str, access_token: str, user_id: str, workspace_id: str
+    session: Session,
+    name: str,
+    access_token: str,
+    user_id: str,
+    workspace_id: str,
+    app_type: str,
 ) -> Context:
     """Add a new context to the database."""
     context = Context(
@@ -115,6 +120,7 @@ def add_context(
         access_token=access_token,
         user_id=user_id,
         workspace_id=workspace_id,
+        app_type=app_type,
     )
     session.add(context)
     session.flush()
@@ -122,7 +128,12 @@ def add_context(
 
 
 def update_context(
-    session: Session, name: str, access_token: str, user_id: str, workspace_id: str
+    session: Session,
+    name: str,
+    access_token: str,
+    user_id: str,
+    workspace_id: str,
+    app_type: str,
 ) -> Context:
     """Update an existing context in the database."""
     context = session.query(Context).filter(Context.name == name).first()
@@ -132,6 +143,7 @@ def update_context(
     context.access_token = access_token
     context.user_id = user_id
     context.workspace_id = workspace_id
+    context.app_type = app_type
     session.flush()
     return context
 

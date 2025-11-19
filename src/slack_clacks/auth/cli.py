@@ -14,12 +14,13 @@ from slack_clacks.configuration.database import (
 )
 
 from .cert import generate_self_signed_cert, get_cert_info
+from .constants import MODE_CLACKS, MODE_CLACKS_LITE
 from .oauth import start_oauth_flow
 
 
 def handle_login(args: argparse.Namespace) -> None:
     ensure_db_updated(config_dir=args.config_dir)
-    credentials = start_oauth_flow(config_dir=args.config_dir)
+    credentials = start_oauth_flow(config_dir=args.config_dir, mode=args.mode)
 
     context_name = args.context
     if not context_name:
@@ -43,6 +44,7 @@ def handle_login(args: argparse.Namespace) -> None:
                 access_token=credentials["access_token"],
                 user_id=credentials["user_id"],
                 workspace_id=credentials["workspace_id"],
+                app_type=credentials["app_type"],
             )
             action = "updated"
         else:
@@ -52,6 +54,7 @@ def handle_login(args: argparse.Namespace) -> None:
                 access_token=credentials["access_token"],
                 user_id=credentials["user_id"],
                 workspace_id=credentials["workspace_id"],
+                app_type=credentials["app_type"],
             )
             action = "created"
 
@@ -62,6 +65,7 @@ def handle_login(args: argparse.Namespace) -> None:
         "action": action,
         "user_id": credentials["user_id"],
         "workspace_id": credentials["workspace_id"],
+        "app_type": credentials["app_type"],
     }
     with args.outfile as ofp:
         json.dump(output, ofp)
@@ -188,6 +192,13 @@ def generate_cli() -> argparse.ArgumentParser:
         "--overwrite",
         action="store_true",
         help="Overwrite existing context if it exists",
+    )
+    login_parser.add_argument(
+        "--mode",
+        type=str,
+        choices=[MODE_CLACKS, MODE_CLACKS_LITE],
+        default=MODE_CLACKS,
+        help="OAuth app mode (default: clacks)",
     )
     login_parser.add_argument(
         "-o",
