@@ -14,6 +14,24 @@ Authenticate via OAuth:
 clacks auth login -c <context-name>
 ```
 
+### Authentication Modes
+
+clacks supports two OAuth modes:
+
+**clacks mode (default)**: Full workspace access
+```bash
+clacks auth login --mode clacks
+```
+Permissions: channels, groups, DMs, MPIMs, files, search
+
+**clacks-lite mode**: Secure, DM-focused access
+```bash
+clacks auth login --mode clacks-lite
+```
+Permissions: DMs, MPIMs, reactions only
+
+Use clacks-lite for security-conscious environments where channel access isn't needed. Operations requiring unavailable scopes (e.g., reading channels in lite mode) will fail with a clear error message and re-authentication instructions.
+
 OAuth requires HTTPS. Generate a self-signed certificate:
 ```bash
 clacks auth cert generate
