@@ -3,14 +3,14 @@ Control Slack from your command line
 
 ## Installation
 
-**Recommended** - run directly with uv (no installation needed):
-```bash
-uvx slack-clacks
-```
-
-**Install globally** with uv (best for use with coding agents like Claude Code, Cursor):
+**Recommended** - install globally with uv (best for use with coding agents like Claude Code, Cursor):
 ```bash
 uv tool install slack-clacks
+```
+
+**Alternative** - run directly without installation:
+```bash
+uvx --from slack-clacks clacks
 ```
 
 **Alternative** - works with pip, poetry, or any package manager:
