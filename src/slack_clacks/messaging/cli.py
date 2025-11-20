@@ -264,17 +264,14 @@ def handle_react(args: argparse.Namespace) -> None:
 
         client = WebClient(token=context.access_token)
 
-        channel_id = None
-
         if args.channel:
             channel_id = resolve_channel_id(client, args.channel)
-        elif args.user:
-            user_id = resolve_user_id(client, args.user)
-            channel_id = open_dm_channel(client, user_id)
-            if channel_id is None:
-                raise ValueError(f"Failed to open DM with user '{args.user}'.")
         else:
-            raise ValueError("Must specify either --channel or --user.")
+            user_id = resolve_user_id(client, args.user)
+            dm_channel = open_dm_channel(client, user_id)
+            if dm_channel is None:
+                raise ValueError(f"Failed to open DM with user '{args.user}'.")
+            channel_id = dm_channel
 
         if args.remove:
             response = remove_reaction(client, channel_id, args.message, args.emoji)
@@ -297,13 +294,15 @@ def generate_react_parser() -> argparse.ArgumentParser:
         type=str,
         help="Configuration directory (default: platform-specific user config dir)",
     )
-    parser.add_argument(
+
+    target_group = parser.add_mutually_exclusive_group(required=True)
+    target_group.add_argument(
         "-c",
         "--channel",
         type=str,
         help="Channel ID or name (e.g., #general, C123456)",
     )
-    parser.add_argument(
+    target_group.add_argument(
         "-u",
         "--user",
         type=str,
