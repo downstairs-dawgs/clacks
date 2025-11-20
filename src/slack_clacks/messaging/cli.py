@@ -37,12 +37,8 @@ def handle_send(args: argparse.Namespace) -> None:
 
         if args.channel:
             channel_id = resolve_channel_id(client, args.channel)
-            if channel_id is None:
-                raise ValueError(f"Channel '{args.channel}' not found.")
         elif args.user:
             user_id = resolve_user_id(client, args.user)
-            if user_id is None:
-                raise ValueError(f"User '{args.user}' not found.")
             channel_id = open_dm_channel(client, user_id)
             if channel_id is None:
                 raise ValueError(f"Failed to open DM with user '{args.user}'.")
@@ -119,8 +115,6 @@ def handle_read(args: argparse.Namespace) -> None:
 
         if args.channel:
             channel_id = resolve_channel_id(client, args.channel)
-            if channel_id is None:
-                raise ValueError(f"Channel '{args.channel}' not found.")
 
             scopes = get_scopes_for_mode(context.app_type)
             if channel_id.startswith("C"):
@@ -130,8 +124,6 @@ def handle_read(args: argparse.Namespace) -> None:
 
         elif args.user:
             user_id = resolve_user_id(client, args.user)
-            if user_id is None:
-                raise ValueError(f"User '{args.user}' not found.")
             channel_id = open_dm_channel(client, user_id)
             if channel_id is None:
                 raise ValueError(f"Failed to open DM with user '{args.user}'.")
