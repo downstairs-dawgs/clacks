@@ -5,12 +5,14 @@ Core messaging operations using Slack Web API.
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 
+from .exceptions import ClacksChannelNotFoundError, ClacksUserNotFoundError
 
-def resolve_channel_id(client: WebClient, channel_identifier: str) -> str | None:
+
+def resolve_channel_id(client: WebClient, channel_identifier: str) -> str:
     """
     Resolve channel identifier to channel ID.
     Accepts channel ID (C...), channel name (#general or general).
-    Returns channel ID or None if not found.
+    Returns channel ID or raises ClacksChannelNotFoundError if not found.
     """
     if channel_identifier.startswith("C") or channel_identifier.startswith("D"):
         return channel_identifier
@@ -27,17 +29,17 @@ def resolve_channel_id(client: WebClient, channel_identifier: str) -> str | None
         for channel in response["channels"]:
             if channel["name"] == channel_name:
                 return channel["id"]
-    except SlackApiError:
-        pass
+    except SlackApiError as e:
+        raise ClacksChannelNotFoundError(channel_identifier) from e
 
-    return None
+    raise ClacksChannelNotFoundError(channel_identifier)
 
 
-def resolve_user_id(client: WebClient, user_identifier: str) -> str | None:
+def resolve_user_id(client: WebClient, user_identifier: str) -> str:
     """
     Resolve user identifier to user ID.
     Accepts user ID (U...), username (@username or username), or email.
-    Returns user ID or None if not found.
+    Returns user ID or raises ClacksUserNotFoundError if not found.
     """
     if user_identifier.startswith("U"):
         return user_identifier
@@ -56,10 +58,10 @@ def resolve_user_id(client: WebClient, user_identifier: str) -> str | None:
                 or user.get("profile", {}).get("email") == user_identifier
             ):
                 return user["id"]
-    except SlackApiError:
-        pass
+    except SlackApiError as e:
+        raise ClacksUserNotFoundError(user_identifier) from e
 
-    return None
+    raise ClacksUserNotFoundError(user_identifier)
 
 
 def open_dm_channel(client: WebClient, user_id: str) -> str | None:
