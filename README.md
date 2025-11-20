@@ -8,7 +8,7 @@ Control Slack from your command line
 uvx slack-clacks
 ```
 
-**Install globally** with uv:
+**Install globally** with uv (best for use with coding agents like Claude Code, Cursor):
 ```bash
 uv tool install slack-clacks
 ```
