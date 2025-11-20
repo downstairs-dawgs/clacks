@@ -8,7 +8,6 @@ on:
   workflow_dispatch:
 
 permissions:
-  id-token: write
   contents: write
 
 jobs:
@@ -51,6 +50,8 @@ jobs:
         if: steps.check_release.outputs.exists == 'false'
         id: pypi_publish
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
 
       - name: Create release
         if: steps.check_release.outputs.exists == 'false' && steps.pypi_publish.outcome == 'success'
