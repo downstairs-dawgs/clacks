@@ -30,11 +30,9 @@ def resolve_channel_id(client: WebClient, channel_identifier: str) -> str:
             if channel["name"] == channel_name:
                 return channel["id"]
     except SlackApiError as e:
-        raise ClacksChannelNotFoundError(
-            f"Channel '{channel_identifier}' not found"
-        ) from e
+        raise ClacksChannelNotFoundError(channel_identifier) from e
 
-    raise ClacksChannelNotFoundError(f"Channel '{channel_identifier}' not found")
+    raise ClacksChannelNotFoundError(channel_identifier)
 
 
 def resolve_user_id(client: WebClient, user_identifier: str) -> str:
@@ -61,9 +59,9 @@ def resolve_user_id(client: WebClient, user_identifier: str) -> str:
             ):
                 return user["id"]
     except SlackApiError as e:
-        raise ClacksUserNotFoundError(f"User '{user_identifier}' not found") from e
+        raise ClacksUserNotFoundError(user_identifier) from e
 
-    raise ClacksUserNotFoundError(f"User '{user_identifier}' not found")
+    raise ClacksUserNotFoundError(user_identifier)
 
 
 def open_dm_channel(client: WebClient, user_id: str) -> str | None:
