@@ -1,12 +1,25 @@
 [project]
 name = "slack-clacks"
 version = "0.1.0"
-description = "Add your description here"
+description = "Control Slack from your command line"
 readme = "README.md"
+license = { text = "MIT" }
 authors = [
     { name = "Neeraj Kashyap", email = "nkashy1@gmail.com" }
 ]
 requires-python = ">=3.13"
+keywords = ["slack", "cli", "command-line", "messaging"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Communications :: Chat",
+    "Topic :: Utilities",
+]
 dependencies = [
     "alembic>=1.17.2",
     "cryptography>=44.0.0",
@@ -14,6 +27,11 @@ dependencies = [
     "slack-sdk>=3.38.0",
     "sqlalchemy>=2.0.44",
 ]
+
+[project.urls]
+Homepage = "https://github.com/zomglings/clacks"
+Repository = "https://github.com/zomglings/clacks"
+Issues = "https://github.com/zomglings/clacks/issues"
 
 [project.scripts]
 clacks = "slack_clacks:main"

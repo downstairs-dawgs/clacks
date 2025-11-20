@@ -3,6 +3,17 @@ Control Slack from your command line
 
 ## Installation
 
+**Recommended** - run directly with uv (no installation needed):
+```bash
+uvx slack-clacks
+```
+
+**Install globally** with uv:
+```bash
+uv tool install slack-clacks
+```
+
+**Alternative** - works with pip, poetry, or any package manager:
 ```bash
 pip install slack-clacks
 ```
