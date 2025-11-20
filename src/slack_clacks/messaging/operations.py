@@ -140,3 +140,21 @@ def get_recent_activity(
 
     all_messages.sort(key=lambda m: float(m.get("ts", 0)), reverse=True)
     return all_messages[:message_limit]
+
+
+def add_reaction(client: WebClient, channel: str, timestamp: str, emoji: str):
+    """
+    Add an emoji reaction to a message.
+    Returns the Slack API response.
+    """
+    emoji = emoji.strip(":")
+    return client.reactions_add(channel=channel, timestamp=timestamp, name=emoji)
+
+
+def remove_reaction(client: WebClient, channel: str, timestamp: str, emoji: str):
+    """
+    Remove an emoji reaction from a message.
+    Returns the Slack API response.
+    """
+    emoji = emoji.strip(":")
+    return client.reactions_remove(channel=channel, timestamp=timestamp, name=emoji)
