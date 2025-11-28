@@ -14,13 +14,32 @@ from slack_clacks.configuration.database import (
 )
 
 from .cert import generate_self_signed_cert, get_cert_info
-from .constants import MODE_CLACKS, MODE_CLACKS_LITE
+from .constants import MODE_CLACKS, MODE_CLACKS_LITE, MODE_COOKIE
+from .cookie import authenticate_with_cookie
 from .oauth import start_oauth_flow
 
 
 def handle_login(args: argparse.Namespace) -> None:
+    import getpass
+
     ensure_db_updated(config_dir=args.config_dir)
-    credentials = start_oauth_flow(config_dir=args.config_dir, mode=args.mode)
+
+    if args.mode == MODE_COOKIE:
+        token = args.token
+        if not token:
+            token = getpass.getpass("Enter xoxc token: ").strip()
+            if not token:
+                raise ValueError("Token cannot be empty")
+
+        cookie = args.cookie
+        if not cookie:
+            cookie = getpass.getpass("Enter d cookie value: ").strip()
+            if not cookie:
+                raise ValueError("Cookie cannot be empty")
+
+        credentials = authenticate_with_cookie(token, cookie)
+    else:
+        credentials = start_oauth_flow(config_dir=args.config_dir, mode=args.mode)
 
     context_name = args.context
     if not context_name:
@@ -98,8 +117,9 @@ def handle_cert_info(args: argparse.Namespace) -> None:
 
 
 def handle_status(args: argparse.Namespace) -> None:
-    from slack_sdk import WebClient
     from slack_sdk.errors import SlackApiError
+
+    from .client import create_client
 
     ensure_db_updated(config_dir=args.config_dir)
     with get_session(args.config_dir) as session:
@@ -109,7 +129,7 @@ def handle_status(args: argparse.Namespace) -> None:
                 "No active authentication context. Authenticate with: clacks auth login"
             )
 
-        client = WebClient(token=context.access_token)
+        client = create_client(context.access_token, context.app_type)
 
         user_name = None
         user_email = None
@@ -142,7 +162,7 @@ def handle_status(args: argparse.Namespace) -> None:
 
 
 def handle_logout(args: argparse.Namespace) -> None:
-    from slack_sdk import WebClient
+    from .client import create_client
 
     ensure_db_updated(config_dir=args.config_dir)
     with get_session(args.config_dir) as session:
@@ -155,7 +175,7 @@ def handle_logout(args: argparse.Namespace) -> None:
             if context is None:
                 raise ValueError("No active authentication context.")
 
-        client = WebClient(token=context.access_token)
+        client = create_client(context.access_token, context.app_type)
         response = client.auth_revoke()
 
         delete_context(session, context.name)
@@ -180,7 +200,7 @@ def generate_cli() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="auth_command")
 
     login_parser = subparsers.add_parser(
-        "login", help="Authenticate with Slack via OAuth"
+        "login", help="Authenticate with Slack via OAuth or browser cookie"
     )
     login_parser.add_argument(
         "-c",
@@ -196,9 +216,29 @@ def generate_cli() -> argparse.ArgumentParser:
     login_parser.add_argument(
         "--mode",
         type=str,
-        choices=[MODE_CLACKS, MODE_CLACKS_LITE],
+        choices=[MODE_CLACKS, MODE_CLACKS_LITE, MODE_COOKIE],
         default=MODE_CLACKS,
-        help="OAuth app mode (default: clacks)",
+        help=(
+            "Authentication mode: clacks (full OAuth), clacks-lite "
+            "(restricted OAuth), or cookie (browser session). "
+            "See docs/cookie-auth.md for cookie extraction."
+        ),
+    )
+    login_parser.add_argument(
+        "--token",
+        type=str,
+        help=(
+            "xoxc token from browser (optional, will prompt if not provided "
+            "when --mode=cookie)"
+        ),
+    )
+    login_parser.add_argument(
+        "--cookie",
+        type=str,
+        help=(
+            "d cookie value from browser (optional, will prompt if not "
+            "provided when --mode=cookie)"
+        ),
     )
     login_parser.add_argument(
         "-o",

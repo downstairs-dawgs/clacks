@@ -1,5 +1,6 @@
 MODE_CLACKS = "clacks"
 MODE_CLACKS_LITE = "clacks-lite"
+MODE_COOKIE = "cookie"
 
 OAUTH_PORT = 51403
 REDIRECT_URI = f"https://127.0.0.1:{OAUTH_PORT}/callback"
