@@ -9,8 +9,7 @@ from slack_clacks.configuration.database import (
     get_current_context,
     get_session,
 )
-
-from .operations import (
+from slack_clacks.messaging.operations import (
     add_reaction,
     get_recent_activity,
     open_dm_channel,

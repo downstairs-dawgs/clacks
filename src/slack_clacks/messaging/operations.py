@@ -5,7 +5,7 @@ Core messaging operations using Slack Web API.
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 
-from .exceptions import (
+from slack_clacks.messaging.exceptions import (
     ClacksChannelNotFoundError,
     ClacksMessageNotFoundError,
     ClacksUserNotFoundError,

@@ -2,6 +2,10 @@ import argparse
 import json
 import sys
 
+from slack_clacks.auth.cert import generate_self_signed_cert, get_cert_info
+from slack_clacks.auth.constants import MODE_CLACKS, MODE_CLACKS_LITE, MODE_COOKIE
+from slack_clacks.auth.cookie import authenticate_with_cookie
+from slack_clacks.auth.oauth import start_oauth_flow
 from slack_clacks.configuration.database import (
     add_context,
     delete_context,
@@ -12,11 +16,6 @@ from slack_clacks.configuration.database import (
     set_current_context,
     update_context,
 )
-
-from .cert import generate_self_signed_cert, get_cert_info
-from .constants import MODE_CLACKS, MODE_CLACKS_LITE, MODE_COOKIE
-from .cookie import authenticate_with_cookie
-from .oauth import start_oauth_flow
 
 
 def handle_login(args: argparse.Namespace) -> None:
@@ -119,7 +118,7 @@ def handle_cert_info(args: argparse.Namespace) -> None:
 def handle_status(args: argparse.Namespace) -> None:
     from slack_sdk.errors import SlackApiError
 
-    from .client import create_client
+    from slack_clacks.auth.client import create_client
 
     ensure_db_updated(config_dir=args.config_dir)
     with get_session(args.config_dir) as session:
@@ -162,7 +161,7 @@ def handle_status(args: argparse.Namespace) -> None:
 
 
 def handle_logout(args: argparse.Namespace) -> None:
-    from .client import create_client
+    from slack_clacks.auth.client import create_client
 
     ensure_db_updated(config_dir=args.config_dir)
     with get_session(args.config_dir) as session:
