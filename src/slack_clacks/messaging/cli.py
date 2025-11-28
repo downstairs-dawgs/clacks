@@ -2,16 +2,14 @@ import argparse
 import json
 import sys
 
-from slack_sdk import WebClient
-
+from slack_clacks.auth.client import create_client
 from slack_clacks.auth.validation import get_scopes_for_mode, validate
 from slack_clacks.configuration.database import (
     ensure_db_updated,
     get_current_context,
     get_session,
 )
-
-from .operations import (
+from slack_clacks.messaging.operations import (
     add_reaction,
     get_recent_activity,
     open_dm_channel,
@@ -34,7 +32,7 @@ def handle_send(args: argparse.Namespace) -> None:
                 "No active authentication context. Authenticate with: clacks auth login"
             )
 
-        client = WebClient(token=context.access_token)
+        client = create_client(context.access_token, context.app_type)
 
         channel_id = None
 
@@ -112,7 +110,7 @@ def handle_read(args: argparse.Namespace) -> None:
                 "No active authentication context. Authenticate with: clacks auth login"
             )
 
-        client = WebClient(token=context.access_token)
+        client = create_client(context.access_token, context.app_type)
 
         channel_id = None
 
@@ -216,7 +214,7 @@ def handle_recent(args: argparse.Namespace) -> None:
         scopes = get_scopes_for_mode(context.app_type)
         validate("channels:history", scopes, raise_on_error=True)
 
-        client = WebClient(token=context.access_token)
+        client = create_client(context.access_token, context.app_type)
 
         messages = get_recent_activity(client, message_limit=args.limit)
 
@@ -264,7 +262,7 @@ def handle_react(args: argparse.Namespace) -> None:
                 "No active authentication context. Authenticate with: clacks auth login"
             )
 
-        client = WebClient(token=context.access_token)
+        client = create_client(context.access_token, context.app_type)
 
         if args.channel:
             channel_id = resolve_channel_id(client, args.channel)
