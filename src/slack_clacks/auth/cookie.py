@@ -28,9 +28,7 @@ def authenticate_with_cookie(token: str, cookie: str) -> Dict[str, str]:
     Raises:
         Exception: If authentication fails
     """
-    client = WebClient(
-        token=token, headers={"Cookie": f"d={cookie}; d-s={int(cookie[:10], 16)}"}
-    )
+    client = WebClient(token=token, headers={"Cookie": f"d={cookie}"})
 
     try:
         auth_response = client.auth_test()

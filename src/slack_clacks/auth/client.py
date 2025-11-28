@@ -21,10 +21,7 @@ def create_client(access_token: str, app_type: str) -> WebClient:
     if app_type == MODE_COOKIE:
         if "|" in access_token:
             token, cookie = access_token.split("|", 1)
-            return WebClient(
-                token=token,
-                headers={"Cookie": f"d={cookie}; d-s={int(cookie[:10], 16)}"},
-            )
+            return WebClient(token=token, headers={"Cookie": f"d={cookie}"})
         else:
             raise ValueError(
                 "Cookie mode requires token in format: xoxc-token|d-cookie-value"
