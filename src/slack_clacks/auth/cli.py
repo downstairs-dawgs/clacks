@@ -174,13 +174,18 @@ def handle_logout(args: argparse.Namespace) -> None:
             if context is None:
                 raise ValueError("No active authentication context.")
 
-        client = create_client(context.access_token, context.app_type)
-        response = client.auth_revoke()
+        from typing import cast
+
+        response_data: dict = {}
+        if context.app_type != MODE_COOKIE:
+            client = create_client(context.access_token, context.app_type)
+            response = client.auth_revoke()
+            response_data = cast(dict, response.data)
 
         delete_context(session, context.name)
 
     with args.outfile as ofp:
-        json.dump(response.data, ofp)
+        json.dump(response_data, ofp)
 
 
 def generate_cli() -> argparse.ArgumentParser:
