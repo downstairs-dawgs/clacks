@@ -13,7 +13,7 @@ from slack_clacks.messaging.cli import (
 
 def generate_cli() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="clacks: Control Slack from your command line"
+        description="clacks: the default mode of degenerate communication."
     )
     parser.add_argument(
         "--version",

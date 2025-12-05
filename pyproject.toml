@@ -1,7 +1,7 @@
 [project]
 name = "slack-clacks"
-version = "0.3.0"
-description = "Control Slack from your command line"
+version = "0.3.1"
+description = "the default mode of degenerate communication."
 readme = "README.md"
 license = { text = "MIT" }
 authors = [
