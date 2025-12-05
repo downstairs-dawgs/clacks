@@ -1,5 +1,5 @@
 # clacks
-Control Slack from your command line
+the default mode of degenerate communication.
 
 ## Installation
 
