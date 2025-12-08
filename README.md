@@ -25,34 +25,56 @@ Authenticate via OAuth:
 clacks auth login -c <context-name>
 ```
 
-### Authentication Modes
+### Modes
 
 clacks supports three authentication modes:
 
-**clacks mode (default)**: Full workspace access via OAuth
+#### clacks mode (default)
+
+Full workspace access via OAuth.
+
 ```bash
 clacks auth login --mode clacks
 ```
+
 Permissions: channels, groups, DMs, MPIMs, files, search
 
-**clacks-lite mode**: Secure, DM-focused access via OAuth
+#### clacks-lite mode
+
+Secure, DM-focused access via OAuth. Use for security-conscious environments where channel access isn't needed.
+
 ```bash
 clacks auth login --mode clacks-lite
 ```
+
 Permissions: DMs, MPIMs, reactions only
 
-**cookie mode**: Browser session authentication
+#### cookie mode
+
+Browser session authentication. Use for quick testing or when OAuth is impractical.
+
 ```bash
 clacks auth login --mode cookie
 ```
+
 Extract xoxc token and d cookie from browser. No OAuth app needed. See [docs/cookie-auth.md](docs/cookie-auth.md) for extraction instructions.
 
-Use clacks-lite for security-conscious environments where channel access isn't needed. Use cookie mode for quick testing or when OAuth is impractical. Operations requiring unavailable scopes will fail with a clear error message and re-authentication instructions.
+**Warning**: Cookie mode is known to cause logout issues on Slack Enterprise workspaces and may trigger security warnings about your account.
 
-OAuth requires HTTPS. Generate a self-signed certificate:
+### Scopes
+
+Operations requiring unavailable scopes will fail with a clear error message and re-authentication instructions.
+
+### Certificate
+
+OAuth requires HTTPS. clacks includes a bundled self-signed certificate, so no setup is required.
+
+To generate your own certificate:
 ```bash
 clacks auth cert generate
 ```
+
+### Account Management
 
 View current authentication status:
 ```bash
