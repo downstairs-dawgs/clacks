@@ -36,6 +36,7 @@ def handle_info(args: argparse.Namespace) -> None:
         "current_context": None,
         "user_id": None,
         "workspace_id": None,
+        "app_type": None,
     }
 
     try:
@@ -53,7 +54,8 @@ def handle_info(args: argparse.Namespace) -> None:
 
                 context_result = session.execute(
                     text(
-                        "SELECT user_id, workspace_id FROM contexts WHERE name = :name"
+                        "SELECT user_id, workspace_id, app_type "
+                        "FROM contexts WHERE name = :name"
                     ),
                     {"name": current_context},
                 ).fetchone()
@@ -61,6 +63,7 @@ def handle_info(args: argparse.Namespace) -> None:
                 if context_result:
                     output["user_id"] = context_result[0]
                     output["workspace_id"] = context_result[1]
+                    output["app_type"] = context_result[2]
     except Exception:
         pass
 
