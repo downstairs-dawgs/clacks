@@ -7,7 +7,6 @@ from slack_sdk.errors import SlackApiError
 
 from slack_clacks.messaging.exceptions import (
     ClacksChannelNotFoundError,
-    ClacksMessageNotFoundError,
     ClacksUserNotFoundError,
 )
 
@@ -68,25 +67,38 @@ def resolve_user_id(client: WebClient, user_identifier: str) -> str:
     raise ClacksUserNotFoundError(user_identifier)
 
 
-def resolve_message_timestamp(
-    client: WebClient, channel_id: str, timestamp: str
-) -> str:
+def resolve_message_timestamp(timestamp_or_link: str) -> str:
     """
-    Resolve and validate that a message with the exact timestamp exists.
-    Returns timestamp if found, raises ClacksMessageNotFoundError if not.
+    Resolve message identifier to timestamp.
+    Accepts raw timestamp (1767795445.338939) or Slack message link
+    (https://workspace.slack.com/archives/C.../p1767795445338939).
+    Returns timestamp or raises ValueError if format is invalid.
     """
-    ts = float(timestamp)
-    response = client.conversations_history(
-        channel=channel_id,
-        limit=100,
-        latest=str(ts + 1),
-        oldest=str(ts - 1),
-        inclusive=True,
-    )
-    messages: list = response.get("messages", [])
-    if not any(m.get("ts") == timestamp for m in messages):
-        raise ClacksMessageNotFoundError(timestamp)
-    return timestamp
+    # Check if it's a Slack message link
+    if timestamp_or_link.startswith("http"):
+        # Link format: https://workspace.slack.com/archives/C08740LGAE6/p1767795445338939
+        import re
+
+        match = re.search(r"/p(\d+)$", timestamp_or_link)
+        if not match:
+            raise ValueError(f"Invalid Slack message link: {timestamp_or_link}")
+        raw_ts = match.group(1)
+        # Insert decimal point 6 chars from end: p1767795445338939 -> 1767795445.338939
+        if len(raw_ts) <= 6:
+            raise ValueError(f"Invalid timestamp in link: {timestamp_or_link}")
+        return f"{raw_ts[:-6]}.{raw_ts[-6:]}"
+
+    # Assume it's a raw timestamp - validate format
+    try:
+        float(timestamp_or_link)
+        if "." not in timestamp_or_link:
+            raise ValueError(f"Invalid timestamp format: {timestamp_or_link}")
+        return timestamp_or_link
+    except ValueError:
+        raise ValueError(
+            f"Invalid message identifier: {timestamp_or_link}. "
+            "Expected timestamp (e.g., 1767795445.338939) or Slack message link."
+        )
 
 
 def open_dm_channel(client: WebClient, user_id: str) -> str | None:

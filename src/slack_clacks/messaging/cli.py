@@ -135,10 +135,8 @@ def handle_read(args: argparse.Namespace) -> None:
         if args.thread:
             response = read_thread(client, channel_id, args.thread, limit=args.limit)
         elif args.message:
-            resolve_message_timestamp(client, channel_id, args.message)
-            response = read_messages(
-                client, channel_id, limit=1, latest=args.message, oldest=args.message
-            )
+            ts = resolve_message_timestamp(args.message)
+            response = read_messages(client, channel_id, limit=1, latest=ts, oldest=ts)
         else:
             response = read_messages(
                 client, channel_id, limit=args.limit, latest=None, oldest=None
@@ -274,12 +272,12 @@ def handle_react(args: argparse.Namespace) -> None:
                 raise ValueError(f"Failed to open DM with user '{args.user}'.")
             channel_id = dm_channel
 
-        resolve_message_timestamp(client, channel_id, args.message)
+        ts = resolve_message_timestamp(args.message)
 
         if args.remove:
-            response = remove_reaction(client, channel_id, args.message, args.emoji)
+            response = remove_reaction(client, channel_id, ts, args.emoji)
         else:
-            response = add_reaction(client, channel_id, args.message, args.emoji)
+            response = add_reaction(client, channel_id, ts, args.emoji)
 
         with args.outfile as ofp:
             json.dump(response.data, ofp)
@@ -362,7 +360,8 @@ def handle_delete(args: argparse.Namespace) -> None:
                 raise ValueError(f"Failed to open DM with user '{args.user}'.")
             channel_id = dm_channel
 
-        response = delete_message(client, channel_id, args.message)
+        ts = resolve_message_timestamp(args.message)
+        response = delete_message(client, channel_id, ts)
 
         with args.outfile as ofp:
             json.dump(response.data, ofp)
