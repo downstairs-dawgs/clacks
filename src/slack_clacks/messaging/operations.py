@@ -4,6 +4,7 @@ Core messaging operations using Slack Web API.
 
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
+from sqlalchemy.orm import Session
 
 from slack_clacks.messaging.exceptions import (
     ClacksChannelNotFoundError,
@@ -11,26 +12,49 @@ from slack_clacks.messaging.exceptions import (
 )
 
 
-def resolve_channel_id(client: WebClient, channel_identifier: str) -> str:
+def resolve_channel_id(
+    client: WebClient,
+    channel_identifier: str,
+    session: Session | None = None,
+    workspace_id: str | None = None,
+) -> str:
     """
     Resolve channel identifier to channel ID.
     Accepts channel ID (C...), channel name (#general or general).
     Returns channel ID or raises ClacksChannelNotFoundError if not found.
+
+    If session and workspace_id are provided, checks rolodex cache first
+    and caches successful API resolutions.
     """
     if channel_identifier.startswith("C") or channel_identifier.startswith("D"):
         return channel_identifier
 
     channel_name = channel_identifier.lstrip("#")
 
-    # TODO(zomglings): Implement pagination via response_metadata.next_cursor
-    # Currently only searches first page (up to 1000 channels)
-    # Plan: Cache channel list in database to avoid repeated API calls
+    # Check rolodex cache first if session provided
+    if session is not None and workspace_id is not None:
+        from slack_clacks.rolodex.operations import add_channel, get_channel
+
+        cached = get_channel(session, workspace_id, channel_name)
+        if cached:
+            return cached.channel_id
+
+    # Fall back to API call
     try:
         response = client.conversations_list(
             types="public_channel,private_channel", limit=1000
         )
         for channel in response["channels"]:
             if channel["name"] == channel_name:
+                # Cache successful resolution
+                if session is not None and workspace_id is not None:
+                    add_channel(
+                        session,
+                        workspace_id=workspace_id,
+                        channel_id=channel["id"],
+                        channel_name=channel["name"],
+                        is_private=channel.get("is_private", False),
+                    )
                 return channel["id"]
     except SlackApiError as e:
         raise ClacksChannelNotFoundError(channel_identifier) from e
@@ -38,20 +62,34 @@ def resolve_channel_id(client: WebClient, channel_identifier: str) -> str:
     raise ClacksChannelNotFoundError(channel_identifier)
 
 
-def resolve_user_id(client: WebClient, user_identifier: str) -> str:
+def resolve_user_id(
+    client: WebClient,
+    user_identifier: str,
+    session: Session | None = None,
+    workspace_id: str | None = None,
+) -> str:
     """
     Resolve user identifier to user ID.
     Accepts user ID (U...), username (@username or username), or email.
     Returns user ID or raises ClacksUserNotFoundError if not found.
+
+    If session and workspace_id are provided, checks rolodex cache first
+    and caches successful API resolutions.
     """
     if user_identifier.startswith("U"):
         return user_identifier
 
     username = user_identifier.lstrip("@")
 
-    # TODO(zomglings): Implement pagination via response_metadata.next_cursor
-    # Currently only searches first page (100-200 users depending on tier)
-    # Plan: Cache user list in database to avoid repeated API calls
+    # Check rolodex cache first if session provided
+    if session is not None and workspace_id is not None:
+        from slack_clacks.rolodex.operations import add_user, get_user
+
+        cached = get_user(session, workspace_id, user_identifier)
+        if cached:
+            return cached.user_id
+
+    # Fall back to API call
     try:
         response = client.users_list()
         for user in response["members"]:
@@ -60,6 +98,17 @@ def resolve_user_id(client: WebClient, user_identifier: str) -> str:
                 or user.get("real_name") == username
                 or user.get("profile", {}).get("email") == user_identifier
             ):
+                # Cache successful resolution
+                if session is not None and workspace_id is not None:
+                    profile = user.get("profile", {})
+                    add_user(
+                        session,
+                        workspace_id=workspace_id,
+                        user_id=user["id"],
+                        username=user.get("name"),
+                        real_name=user.get("real_name"),
+                        email=profile.get("email") if profile else None,
+                    )
                 return user["id"]
     except SlackApiError as e:
         raise ClacksUserNotFoundError(user_identifier) from e
