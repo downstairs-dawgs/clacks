@@ -37,7 +37,12 @@ class TestResolveMessageTimestamp(unittest.TestCase):
             resolve_message_timestamp("1767795445338939")
         self.assertIn("missing decimal", str(ctx.exception))
 
-    def test_invalid_timestamp_garbage(self):
+    def test_invalid_timestamp_garbage_no_decimal(self):
+        with self.assertRaises(ValueError) as ctx:
+            resolve_message_timestamp("not-a-timestamp")
+        self.assertIn("missing decimal", str(ctx.exception))
+
+    def test_invalid_timestamp_garbage_not_a_number(self):
         with self.assertRaises(ValueError) as ctx:
             resolve_message_timestamp("not.a.timestamp")
         self.assertIn("Invalid message identifier", str(ctx.exception))
