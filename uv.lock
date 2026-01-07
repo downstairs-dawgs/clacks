@@ -299,7 +299,7 @@ wheels = [
 
 [[package]]
 name = "slack-clacks"
-version = "0.3.2"
+version = "0.3.3"
 source = { editable = "." }
 dependencies = [
     { name = "alembic" },

@@ -11,6 +11,7 @@ from slack_clacks.configuration.database import (
 )
 from slack_clacks.messaging.operations import (
     add_reaction,
+    delete_message,
     get_recent_activity,
     open_dm_channel,
     read_messages,
@@ -337,5 +338,81 @@ def generate_react_parser() -> argparse.ArgumentParser:
         help="Output file for JSON results (default: stdout)",
     )
     parser.set_defaults(func=handle_react)
+
+    return parser
+
+
+def handle_delete(args: argparse.Namespace) -> None:
+    ensure_db_updated(config_dir=args.config_dir)
+    with get_session(args.config_dir) as session:
+        context = get_current_context(session)
+        if context is None:
+            raise ValueError(
+                "No active authentication context. Authenticate with: clacks auth login"
+            )
+
+        client = create_client(context.access_token, context.app_type)
+
+        if args.channel:
+            channel_id = resolve_channel_id(client, args.channel)
+        else:
+            user_id = resolve_user_id(client, args.user)
+            dm_channel = open_dm_channel(client, user_id)
+            if dm_channel is None:
+                raise ValueError(f"Failed to open DM with user '{args.user}'.")
+            channel_id = dm_channel
+
+        resolve_message_timestamp(client, channel_id, args.message)
+
+        response = delete_message(client, channel_id, args.message)
+
+        with args.outfile as ofp:
+            json.dump(response.data, ofp)
+
+
+def generate_delete_parser() -> argparse.ArgumentParser:
+    # Channel is required because Slack's chat.delete API requires both channel and ts.
+    # Timestamps are only unique within a channel, not globally.
+    # See: https://api.slack.com/methods/chat.delete
+    parser = argparse.ArgumentParser(
+        description="Delete a message",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+
+    parser.add_argument(
+        "-D",
+        "--config-dir",
+        type=str,
+        help="Configuration directory (default: platform-specific user config dir)",
+    )
+
+    target_group = parser.add_mutually_exclusive_group(required=True)
+    target_group.add_argument(
+        "-c",
+        "--channel",
+        type=str,
+        help="Channel ID or name (e.g., #general, C123456)",
+    )
+    target_group.add_argument(
+        "-u",
+        "--user",
+        type=str,
+        help="User ID or name for DM (e.g., @username, U123456)",
+    )
+    parser.add_argument(
+        "-m",
+        "--message",
+        type=str,
+        required=True,
+        help="Message timestamp to delete",
+    )
+    parser.add_argument(
+        "-o",
+        "--outfile",
+        type=argparse.FileType("a"),
+        default=sys.stdout,
+        help="Output file for JSON results (default: stdout)",
+    )
+    parser.set_defaults(func=handle_delete)
 
     return parser

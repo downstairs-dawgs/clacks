@@ -183,3 +183,12 @@ def remove_reaction(client: WebClient, channel: str, timestamp: str, emoji: str)
     """
     emoji = emoji.strip(":")
     return client.reactions_remove(channel=channel, timestamp=timestamp, name=emoji)
+
+
+def delete_message(client: WebClient, channel: str, timestamp: str):
+    """
+    Delete a message from a channel or DM.
+    Returns the Slack API response.
+    Note: Users can only delete their own messages.
+    """
+    return client.chat_delete(channel=channel, ts=timestamp)
