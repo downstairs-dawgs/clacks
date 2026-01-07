@@ -89,10 +89,12 @@ def resolve_message_timestamp(timestamp_or_link: str) -> str:
         return f"{raw_ts[:-6]}.{raw_ts[-6:]}"
 
     # Assume it's a raw timestamp - validate format
+    if "." not in timestamp_or_link:
+        raise ValueError(
+            f"Invalid timestamp format (missing decimal): {timestamp_or_link}"
+        )
     try:
         float(timestamp_or_link)
-        if "." not in timestamp_or_link:
-            raise ValueError(f"Invalid timestamp format: {timestamp_or_link}")
         return timestamp_or_link
     except ValueError:
         raise ValueError(
