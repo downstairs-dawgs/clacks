@@ -4,6 +4,7 @@ from importlib.metadata import version
 from slack_clacks.auth.cli import generate_cli as generate_auth_cli
 from slack_clacks.configuration.cli import generate_cli as generate_config_cli
 from slack_clacks.messaging.cli import (
+    generate_delete_parser,
     generate_react_parser,
     generate_read_parser,
     generate_recent_parser,
@@ -66,6 +67,14 @@ def generate_cli() -> argparse.ArgumentParser:
         parents=[react_parser],
         add_help=False,
         help=react_parser.description,
+    )
+
+    delete_parser = generate_delete_parser()
+    subparsers.add_parser(
+        "delete",
+        parents=[delete_parser],
+        add_help=False,
+        help=delete_parser.description,
     )
 
     return parser
