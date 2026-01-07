@@ -14,4 +14,5 @@ Before committing, run all checks:
 uv run ruff check
 uv run ruff format --check
 uv run mypy src/
+uv run python -m unittest discover -s tests
 ```
