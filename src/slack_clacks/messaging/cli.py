@@ -362,8 +362,6 @@ def handle_delete(args: argparse.Namespace) -> None:
                 raise ValueError(f"Failed to open DM with user '{args.user}'.")
             channel_id = dm_channel
 
-        resolve_message_timestamp(client, channel_id, args.message)
-
         response = delete_message(client, channel_id, args.message)
 
         with args.outfile as ofp:
