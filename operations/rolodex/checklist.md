@@ -56,4 +56,4 @@
 - [x] Bump version to 0.4.0
 - [x] Run all checks (ruff, mypy, tests)
 - [x] Update this checklist - mark all items complete
-- [ ] Create PR closing #38, #50
+- [x] Create PR closing #38, #50
