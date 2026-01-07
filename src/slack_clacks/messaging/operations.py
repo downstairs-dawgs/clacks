@@ -79,7 +79,7 @@ def resolve_message_timestamp(timestamp_or_link: str) -> str:
         # Link format: https://workspace.slack.com/archives/C08740LGAE6/p1767795445338939
         import re
 
-        match = re.search(r"/p(\d+)$", timestamp_or_link)
+        match = re.search(r"/p(\d+)(?:\?|#|$)", timestamp_or_link)
         if not match:
             raise ValueError(f"Invalid Slack message link: {timestamp_or_link}")
         raw_ts = match.group(1)

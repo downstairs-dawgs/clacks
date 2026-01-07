@@ -18,6 +18,16 @@ class TestResolveMessageTimestamp(unittest.TestCase):
         result = resolve_message_timestamp(link)
         self.assertEqual(result, "1234567890.123456")
 
+    def test_message_link_with_query_params(self):
+        link = "https://workspace.slack.com/archives/C08740LGAE6/p1767795445338939?thread_ts=1767795445.338939&cid=C08740LGAE6"
+        result = resolve_message_timestamp(link)
+        self.assertEqual(result, "1767795445.338939")
+
+    def test_message_link_with_fragment(self):
+        link = "https://workspace.slack.com/archives/C08740LGAE6/p1767795445338939#something"
+        result = resolve_message_timestamp(link)
+        self.assertEqual(result, "1767795445.338939")
+
     def test_invalid_link_no_timestamp(self):
         with self.assertRaises(ValueError) as ctx:
             resolve_message_timestamp(
