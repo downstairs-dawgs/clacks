@@ -3,28 +3,45 @@ the default mode of degenerate communication.
 
 ## Installation
 
-**Recommended** - run directly without installation:
+Choose your preferred method:
+
+**With uv** (no installation required):
 ```bash
 uvx --from slack-clacks clacks
 ```
 
-**Alternative** - install globally with uv:
+**With uv** (permanent installation):
 ```bash
 uv tool install slack-clacks
 ```
 
-**Alternative** - works with pip, poetry, or any package manager:
+**With pip/pipx/poetry**:
 ```bash
 pip install slack-clacks
+# or: pipx install slack-clacks
 ```
 
-All examples below use `uvx --from slack-clacks clacks`. If installed globally, replace with just `clacks`.
+Examples below use `clacks` directly. If using `uvx`, prefix commands with `uvx --from slack-clacks`.
+
+## Updating
+
+**With uvx**: Updates happen automatically (always runs latest version).
+
+**With uv tool**:
+```bash
+uv tool upgrade slack-clacks
+```
+
+**With pip**:
+```bash
+pip install --upgrade slack-clacks
+```
 
 ## Authentication
 
 Authenticate via OAuth:
 ```bash
-uvx --from slack-clacks clacks auth login -c <context-name>
+clacks auth login -c <context-name>
 ```
 
 ### Modes
@@ -36,7 +53,7 @@ clacks supports three authentication modes:
 Full workspace access via OAuth.
 
 ```bash
-uvx --from slack-clacks clacks auth login --mode clacks
+clacks auth login --mode clacks
 ```
 
 Permissions: channels, groups, DMs, MPIMs, files, search
@@ -46,7 +63,7 @@ Permissions: channels, groups, DMs, MPIMs, files, search
 Secure, DM-focused access via OAuth. Use for security-conscious environments where channel access isn't needed.
 
 ```bash
-uvx --from slack-clacks clacks auth login --mode clacks-lite
+clacks auth login --mode clacks-lite
 ```
 
 Permissions: DMs, MPIMs, reactions only
@@ -56,7 +73,7 @@ Permissions: DMs, MPIMs, reactions only
 Browser session authentication. Use for quick testing or when OAuth is impractical.
 
 ```bash
-uvx --from slack-clacks clacks auth login --mode cookie
+clacks auth login --mode cookie
 ```
 
 Extract xoxc token and d cookie from browser. No OAuth app needed. See [docs/cookie-auth.md](docs/cookie-auth.md) for extraction instructions.
@@ -73,41 +90,41 @@ OAuth requires HTTPS. clacks includes a bundled self-signed certificate, so no s
 
 To generate your own certificate:
 ```bash
-uvx --from slack-clacks clacks auth cert generate
+clacks auth cert generate
 ```
 
 ### Account Management
 
 View current authentication status:
 ```bash
-uvx --from slack-clacks clacks auth status
+clacks auth status
 ```
 
 Revoke authentication:
 ```bash
-uvx --from slack-clacks clacks auth logout
+clacks auth logout
 ```
 
 ## Configuration
 
 Multiple authentication contexts supported. Initialize configuration:
 ```bash
-uvx --from slack-clacks clacks config init
+clacks config init
 ```
 
 List available contexts:
 ```bash
-uvx --from slack-clacks clacks config contexts
+clacks config contexts
 ```
 
 Switch between contexts:
 ```bash
-uvx --from slack-clacks clacks config switch -C <context-name>
+clacks config switch -C <context-name>
 ```
 
 View current configuration:
 ```bash
-uvx --from slack-clacks clacks config info
+clacks config info
 ```
 
 ## Messaging
@@ -116,50 +133,50 @@ uvx --from slack-clacks clacks config info
 
 Send to channel:
 ```bash
-uvx --from slack-clacks clacks send -c "#general" -m "message text"
-uvx --from slack-clacks clacks send -c "C123456" -m "message text"
+clacks send -c "#general" -m "message text"
+clacks send -c "C123456" -m "message text"
 ```
 
 Send direct message:
 ```bash
-uvx --from slack-clacks clacks send -u "@username" -m "message text"
-uvx --from slack-clacks clacks send -u "U123456" -m "message text"
+clacks send -u "@username" -m "message text"
+clacks send -u "U123456" -m "message text"
 ```
 
 Reply to thread:
 ```bash
-uvx --from slack-clacks clacks send -c "#general" -m "reply text" -t "1234567890.123456"
+clacks send -c "#general" -m "reply text" -t "1234567890.123456"
 ```
 
 ### Read
 
 Read messages from channel:
 ```bash
-uvx --from slack-clacks clacks read -c "#general"
-uvx --from slack-clacks clacks read -c "#general" -l 50
+clacks read -c "#general"
+clacks read -c "#general" -l 50
 ```
 
 Read direct messages:
 ```bash
-uvx --from slack-clacks clacks read -u "@username"
+clacks read -u "@username"
 ```
 
 Read thread:
 ```bash
-uvx --from slack-clacks clacks read -c "#general" -t "1234567890.123456"
+clacks read -c "#general" -t "1234567890.123456"
 ```
 
 Read specific message:
 ```bash
-uvx --from slack-clacks clacks read -c "#general" -m "1234567890.123456"
+clacks read -c "#general" -m "1234567890.123456"
 ```
 
 ### Recent
 
 View recent messages across all conversations:
 ```bash
-uvx --from slack-clacks clacks recent
-uvx --from slack-clacks clacks recent -l 50
+clacks recent
+clacks recent -l 50
 ```
 
 ## Rolodex
@@ -168,32 +185,32 @@ Manage aliases for users and channels. Aliases resolve to platform-specific IDs 
 
 Sync from Slack API:
 ```bash
-uvx --from slack-clacks clacks rolodex sync
+clacks rolodex sync
 ```
 
 Add alias manually:
 ```bash
-uvx --from slack-clacks clacks rolodex add <alias> -t <target-id> -T <target-type>
-uvx --from slack-clacks clacks rolodex add kartik -t U03QPJ2KMJ6 -T user
-uvx --from slack-clacks clacks rolodex add dev-channel -t C08740LGAE6 -T channel
+clacks rolodex add <alias> -t <target-id> -T <target-type>
+clacks rolodex add kartik -t U03QPJ2KMJ6 -T user
+clacks rolodex add dev-channel -t C08740LGAE6 -T channel
 ```
 
 List aliases:
 ```bash
-uvx --from slack-clacks clacks rolodex list
-uvx --from slack-clacks clacks rolodex list -T user
-uvx --from slack-clacks clacks rolodex list -p slack
+clacks rolodex list
+clacks rolodex list -T user
+clacks rolodex list -p slack
 ```
 
 Remove alias:
 ```bash
-uvx --from slack-clacks clacks rolodex remove <alias> -T <target-type>
+clacks rolodex remove <alias> -T <target-type>
 ```
 
 Show valid target types for a platform:
 ```bash
-uvx --from slack-clacks clacks rolodex platforminfo -p slack
-uvx --from slack-clacks clacks rolodex platforminfo -p github
+clacks rolodex platforminfo -p slack
+clacks rolodex platforminfo -p github
 ```
 
 ## Agent Skills
@@ -202,27 +219,27 @@ clacks supports the [Agent Skills](https://agentskills.io) open standard for AI 
 
 Print SKILL.md to stdout:
 ```bash
-uvx --from slack-clacks clacks skill
+clacks skill
 ```
 
 Install for Claude Code (global):
 ```bash
-uvx --from slack-clacks clacks skill --mode claude
+clacks skill --mode claude
 ```
 
 Install for OpenAI Codex (global):
 ```bash
-uvx --from slack-clacks clacks skill --mode codex
+clacks skill --mode codex
 ```
 
 Install for Cursor/Windsurf/Aider (global):
 ```bash
-uvx --from slack-clacks clacks skill --mode universal
+clacks skill --mode universal
 ```
 
 Install for VS Code Copilot (project):
 ```bash
-uvx --from slack-clacks clacks skill --mode github
+clacks skill --mode github
 ```
 
 All modes support `-global` and `-project` suffixes (e.g., `claude-project`, `codex-global`).
@@ -231,7 +248,7 @@ All modes support `-global` and `-project` suffixes (e.g., `claude-project`, `co
 
 All commands output JSON to stdout. Redirect to file:
 ```bash
-uvx --from slack-clacks clacks auth status -o output.json
+clacks auth status -o output.json
 ```
 
 ## Requirements

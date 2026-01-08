@@ -16,10 +16,13 @@ Use the `clacks` CLI to interact with Slack workspaces.
 
 ## Prerequisites
 
-Authenticate with your Slack workspace:
+Authenticate with your Slack workspace (requires uv):
 ```bash
 uvx --from slack-clacks clacks auth login -c <context-name>
 ```
+
+Using `uvx` ensures you always run the latest version. If clacks is installed globally
+via `uv tool install slack-clacks` or `pip install slack-clacks`, use `clacks` directly.
 
 ## Sending Messages
 
