@@ -160,6 +160,40 @@ clacks recent
 clacks recent -l 50
 ```
 
+## Rolodex
+
+Manage aliases for users and channels. Aliases resolve to platform-specific IDs (e.g., Slack user IDs).
+
+Sync from Slack API:
+```bash
+clacks rolodex sync
+```
+
+Add alias manually:
+```bash
+clacks rolodex add <alias> -t <target-id> -T <target-type>
+clacks rolodex add kartik -t U03QPJ2KMJ6 -T user
+clacks rolodex add dev-channel -t C08740LGAE6 -T channel
+```
+
+List aliases:
+```bash
+clacks rolodex list
+clacks rolodex list -T user
+clacks rolodex list -p slack
+```
+
+Remove alias:
+```bash
+clacks rolodex remove <alias> -T <target-type>
+```
+
+Show valid target types for a platform:
+```bash
+clacks rolodex platforminfo -p slack
+clacks rolodex platforminfo -p github
+```
+
 ## Output
 
 All commands output JSON to stdout. Redirect to file:

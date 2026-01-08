@@ -10,6 +10,7 @@ from slack_clacks.messaging.cli import (
     generate_recent_parser,
     generate_send_parser,
 )
+from slack_clacks.rolodex.cli import generate_cli as generate_rolodex_cli
 
 
 def generate_cli() -> argparse.ArgumentParser:
@@ -35,6 +36,14 @@ def generate_cli() -> argparse.ArgumentParser:
     auth_parser = generate_auth_cli()
     subparsers.add_parser(
         "auth", parents=[auth_parser], add_help=False, help=auth_parser.description
+    )
+
+    rolodex_parser = generate_rolodex_cli()
+    subparsers.add_parser(
+        "rolodex",
+        parents=[rolodex_parser],
+        add_help=False,
+        help=rolodex_parser.description,
     )
 
     send_parser = generate_send_parser()
