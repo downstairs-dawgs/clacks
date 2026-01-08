@@ -60,7 +60,8 @@ def generate_cli() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Output or install Agent Skills spec (agentskills.io) SKILL.md"
     )
-    parser.add_argument(
+    output_group = parser.add_mutually_exclusive_group()
+    output_group.add_argument(
         "-m",
         "--mode",
         type=str,
@@ -68,7 +69,7 @@ def generate_cli() -> argparse.ArgumentParser:
         default=None,
         help="Installation mode. Without this flag, prints SKILL.md to stdout.",
     )
-    parser.add_argument(
+    output_group.add_argument(
         "-o",
         "--outdir",
         type=str,
