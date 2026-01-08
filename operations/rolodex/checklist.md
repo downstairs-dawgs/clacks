@@ -51,7 +51,23 @@
 - [x] Update `resolve_channel_id()` to cache successful API resolutions
 - [ ] Add tests for cache-first resolution behavior
 
-## Phase 5: Finalization
+## Phase 5: Aliases
+
+- [x] Add `Alias` model to `rolodex/models.py`
+- [x] Create Alembic migration for aliases table
+- [x] Implement `add_alias()` - add globally unique alias
+- [x] Implement `get_alias()` - lookup by alias name with optional context filter
+- [x] Implement `list_aliases()` - list aliases with filtering
+- [x] Implement `remove_alias()` - delete an alias
+- [x] Implement `resolve_alias()` - resolve alias with context security check
+- [x] Implement `clacks rolodex alias-add` command
+- [x] Implement `clacks rolodex alias-list` command
+- [x] Implement `clacks rolodex alias-remove` command
+- [x] Update `resolve_user_id()` to check aliases first (before rolodex)
+- [x] Update `resolve_channel_id()` to check aliases first (before rolodex)
+- [ ] Add tests for alias operations
+
+## Phase 6: Finalization
 
 - [x] Bump version to 0.4.0
 - [x] Run all checks (ruff, mypy, tests)

@@ -14,11 +14,14 @@ from slack_clacks.configuration.database import (
     get_session,
 )
 from slack_clacks.rolodex.operations import (
+    add_alias,
     add_channel,
     add_user,
     clear_rolodex,
+    list_aliases,
     list_channels,
     list_users,
+    remove_alias,
     remove_channel,
     remove_user,
     search_channels,
@@ -301,6 +304,90 @@ def handle_clear(args: argparse.Namespace) -> None:
             "status": "cleared",
             "users_deleted": users_deleted,
             "channels_deleted": channels_deleted,
+        }
+        with args.outfile as ofp:
+            json.dump(output, ofp)
+
+
+# --- Alias handlers ---
+
+
+def handle_alias_add(args: argparse.Namespace) -> None:
+    ensure_db_updated(config_dir=args.config_dir)
+    with get_session(args.config_dir) as session:
+        context = get_current_context(session)
+        if context is None:
+            raise ValueError(
+                "No active authentication context. Authenticate with: clacks auth login"
+            )
+
+        alias_obj = add_alias(
+            session,
+            alias=args.alias,
+            platform=args.platform,
+            target_id=args.target_id,
+            target_type=args.target_type,
+            context=context.name,
+        )
+
+        output = {
+            "status": "added",
+            "alias": alias_obj.alias,
+            "platform": alias_obj.platform,
+            "target_id": alias_obj.target_id,
+            "target_type": alias_obj.target_type,
+            "context": alias_obj.context,
+        }
+        with args.outfile as ofp:
+            json.dump(output, ofp)
+
+
+def handle_alias_list(args: argparse.Namespace) -> None:
+    ensure_db_updated(config_dir=args.config_dir)
+    with get_session(args.config_dir) as session:
+        context = get_current_context(session)
+        if context is None:
+            raise ValueError(
+                "No active authentication context. Authenticate with: clacks auth login"
+            )
+
+        # Filter by current context by default, or show all if --all is set
+        filter_context = None if args.all else context.name
+
+        aliases = list_aliases(
+            session,
+            context=filter_context,
+            platform=args.platform,
+            target_type=args.target_type,
+            limit=args.limit,
+            offset=args.offset,
+        )
+
+        output = {
+            "aliases": [
+                {
+                    "alias": a.alias,
+                    "platform": a.platform,
+                    "target_id": a.target_id,
+                    "target_type": a.target_type,
+                    "context": a.context,
+                }
+                for a in aliases
+            ],
+            "count": len(aliases),
+        }
+        with args.outfile as ofp:
+            json.dump(output, ofp)
+
+
+def handle_alias_remove(args: argparse.Namespace) -> None:
+    ensure_db_updated(config_dir=args.config_dir)
+    with get_session(args.config_dir) as session:
+        removed = remove_alias(session, args.alias)
+
+        output = {
+            "status": "removed" if removed else "not_found",
+            "alias": args.alias,
         }
         with args.outfile as ofp:
             json.dump(output, ofp)
@@ -619,5 +706,125 @@ def generate_cli() -> argparse.ArgumentParser:
         help="Output file for JSON results (default: stdout)",
     )
     clear_parser.set_defaults(func=handle_clear)
+
+    # --- alias add ---
+    alias_add_parser = subparsers.add_parser(
+        "alias-add", help="Add an alias for a user or channel"
+    )
+    alias_add_parser.add_argument(
+        "-D",
+        "--config-dir",
+        type=Path,
+        default=None,
+        help="Configuration directory",
+    )
+    alias_add_parser.add_argument(
+        "alias",
+        type=str,
+        help="The alias name (globally unique)",
+    )
+    alias_add_parser.add_argument(
+        "-p",
+        "--platform",
+        type=str,
+        default="slack",
+        help="Platform (e.g., slack, github). Default: slack",
+    )
+    alias_add_parser.add_argument(
+        "-t",
+        "--target-id",
+        type=str,
+        required=True,
+        help="Target ID (e.g., U123456 for user, C123456 for channel)",
+    )
+    alias_add_parser.add_argument(
+        "-T",
+        "--target-type",
+        type=str,
+        required=True,
+        choices=["user", "channel"],
+        help="Target type (user or channel)",
+    )
+    alias_add_parser.add_argument(
+        "-o",
+        "--outfile",
+        type=argparse.FileType("a"),
+        default=sys.stdout,
+        help="Output file for JSON results (default: stdout)",
+    )
+    alias_add_parser.set_defaults(func=handle_alias_add)
+
+    # --- alias list ---
+    alias_list_parser = subparsers.add_parser("alias-list", help="List aliases")
+    alias_list_parser.add_argument(
+        "-D",
+        "--config-dir",
+        type=Path,
+        default=None,
+        help="Configuration directory",
+    )
+    alias_list_parser.add_argument(
+        "-a",
+        "--all",
+        action="store_true",
+        help="Show aliases from all contexts (default: current context only)",
+    )
+    alias_list_parser.add_argument(
+        "-p",
+        "--platform",
+        type=str,
+        help="Filter by platform (e.g., slack, github)",
+    )
+    alias_list_parser.add_argument(
+        "-T",
+        "--target-type",
+        type=str,
+        choices=["user", "channel"],
+        help="Filter by target type",
+    )
+    alias_list_parser.add_argument(
+        "-l",
+        "--limit",
+        type=int,
+        default=100,
+        help="Maximum number of results (default: 100)",
+    )
+    alias_list_parser.add_argument(
+        "--offset",
+        type=int,
+        default=0,
+        help="Number of results to skip (default: 0)",
+    )
+    alias_list_parser.add_argument(
+        "-o",
+        "--outfile",
+        type=argparse.FileType("a"),
+        default=sys.stdout,
+        help="Output file for JSON results (default: stdout)",
+    )
+    alias_list_parser.set_defaults(func=handle_alias_list)
+
+    # --- alias remove ---
+    alias_remove_parser = subparsers.add_parser("alias-remove", help="Remove an alias")
+    alias_remove_parser.add_argument(
+        "-D",
+        "--config-dir",
+        type=Path,
+        default=None,
+        help="Configuration directory",
+    )
+    alias_remove_parser.add_argument(
+        "alias",
+        type=str,
+        help="The alias name to remove",
+    )
+    alias_remove_parser.add_argument(
+        "-o",
+        "--outfile",
+        type=argparse.FileType("a"),
+        default=sys.stdout,
+        help="Output file for JSON results (default: stdout)",
+    )
+    alias_remove_parser.set_defaults(func=handle_alias_remove)
 
     return parser

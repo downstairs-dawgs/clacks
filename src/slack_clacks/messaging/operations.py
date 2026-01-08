@@ -17,21 +17,33 @@ def resolve_channel_id(
     channel_identifier: str,
     session: Session | None = None,
     workspace_id: str | None = None,
+    context_name: str | None = None,
 ) -> str:
     """
     Resolve channel identifier to channel ID.
-    Accepts channel ID (C...), channel name (#general or general).
+    Accepts channel ID (C...), channel name (#general or general), or alias.
     Returns channel ID or raises ClacksChannelNotFoundError if not found.
 
-    If session and workspace_id are provided, checks rolodex cache first
-    and caches successful API resolutions.
+    Resolution order:
+    1. Check if already a Slack channel ID (C... or D...)
+    2. Check aliases (if session and context_name provided)
+    3. Check rolodex cache (if session and workspace_id provided)
+    4. Fall back to Slack API
     """
     if channel_identifier.startswith("C") or channel_identifier.startswith("D"):
         return channel_identifier
 
+    # Check aliases first (requires context for security)
+    if session is not None and context_name is not None:
+        from slack_clacks.rolodex.operations import resolve_alias
+
+        alias = resolve_alias(session, channel_identifier, context_name, "channel")
+        if alias:
+            return alias.target_id
+
     channel_name = channel_identifier.lstrip("#")
 
-    # Check rolodex cache first if session provided
+    # Check rolodex cache if session provided
     if session is not None and workspace_id is not None:
         from slack_clacks.rolodex.operations import add_channel, get_channel
 
@@ -67,21 +79,33 @@ def resolve_user_id(
     user_identifier: str,
     session: Session | None = None,
     workspace_id: str | None = None,
+    context_name: str | None = None,
 ) -> str:
     """
     Resolve user identifier to user ID.
-    Accepts user ID (U...), username (@username or username), or email.
+    Accepts user ID (U...), username (@username or username), email, or alias.
     Returns user ID or raises ClacksUserNotFoundError if not found.
 
-    If session and workspace_id are provided, checks rolodex cache first
-    and caches successful API resolutions.
+    Resolution order:
+    1. Check if already a Slack user ID (U...)
+    2. Check aliases (if session and context_name provided)
+    3. Check rolodex cache (if session and workspace_id provided)
+    4. Fall back to Slack API
     """
     if user_identifier.startswith("U"):
         return user_identifier
 
+    # Check aliases first (requires context for security)
+    if session is not None and context_name is not None:
+        from slack_clacks.rolodex.operations import resolve_alias
+
+        alias = resolve_alias(session, user_identifier, context_name, "user")
+        if alias:
+            return alias.target_id
+
     username = user_identifier.lstrip("@")
 
-    # Check rolodex cache first if session provided
+    # Check rolodex cache if session provided
     if session is not None and workspace_id is not None:
         from slack_clacks.rolodex.operations import add_user, get_user
 

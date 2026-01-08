@@ -42,3 +42,25 @@ class RolodexChannel(Base):
     __table_args__ = (
         Index("ix_rolodex_channels_name", "workspace_id", "channel_name"),
     )
+
+
+class Alias(Base):
+    """
+    Platform-agnostic aliases for users and channels.
+    Aliases are globally unique and scoped to a context to prevent cross-context leaks.
+    """
+
+    __tablename__ = "aliases"
+
+    alias: Mapped[str] = mapped_column(String, primary_key=True)
+    platform: Mapped[str] = mapped_column(String, nullable=False)  # 'slack', 'github'
+    target_id: Mapped[str] = mapped_column(String, nullable=False)  # U123, C456, etc.
+    target_type: Mapped[str] = mapped_column(
+        String, nullable=False
+    )  # 'user', 'channel'
+    context: Mapped[str] = mapped_column(String, nullable=False)  # context name
+
+    __table_args__ = (
+        Index("ix_aliases_platform_target", "platform", "target_id"),
+        Index("ix_aliases_context", "context"),
+    )

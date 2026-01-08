@@ -8,7 +8,7 @@ from slack_sdk import WebClient
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
-from slack_clacks.rolodex.models import RolodexChannel, RolodexUser
+from slack_clacks.rolodex.models import Alias, RolodexChannel, RolodexUser
 
 
 def add_user(
@@ -360,3 +360,106 @@ def sync_channels(
             break
 
     return count
+
+
+# --- Alias operations ---
+
+
+def add_alias(
+    session: Session,
+    alias: str,
+    platform: str,
+    target_id: str,
+    target_type: str,
+    context: str,
+) -> Alias:
+    """
+    Add an alias. Raises ValueError if alias already exists.
+    Aliases are globally unique regardless of platform or context.
+    """
+    existing = session.query(Alias).filter(Alias.alias == alias).first()
+    if existing:
+        raise ValueError(f"Alias '{alias}' already exists")
+
+    new_alias = Alias(
+        alias=alias,
+        platform=platform,
+        target_id=target_id,
+        target_type=target_type,
+        context=context,
+    )
+    session.add(new_alias)
+    session.flush()
+    return new_alias
+
+
+def get_alias(
+    session: Session,
+    alias: str,
+    context: str | None = None,
+) -> Alias | None:
+    """
+    Lookup an alias by name.
+    If context is provided, only returns the alias if it matches the context.
+    """
+    query = session.query(Alias).filter(Alias.alias == alias)
+    if context is not None:
+        query = query.filter(Alias.context == context)
+    return query.first()
+
+
+def list_aliases(
+    session: Session,
+    context: str | None = None,
+    platform: str | None = None,
+    target_type: str | None = None,
+    limit: int = 100,
+    offset: int = 0,
+) -> list[Alias]:
+    """List aliases with optional filtering by context, platform, or target_type."""
+    query = session.query(Alias)
+    if context is not None:
+        query = query.filter(Alias.context == context)
+    if platform is not None:
+        query = query.filter(Alias.platform == platform)
+    if target_type is not None:
+        query = query.filter(Alias.target_type == target_type)
+    return query.order_by(Alias.alias).limit(limit).offset(offset).all()
+
+
+def remove_alias(
+    session: Session,
+    alias: str,
+) -> bool:
+    """Remove an alias. Returns True if removed, False if not found."""
+    existing = session.query(Alias).filter(Alias.alias == alias).first()
+    if existing:
+        session.delete(existing)
+        session.flush()
+        return True
+    return False
+
+
+def resolve_alias(
+    session: Session,
+    identifier: str,
+    context: str,
+    target_type: str | None = None,
+) -> Alias | None:
+    """
+    Resolve an identifier to an alias if it matches the current context.
+    Returns None if no matching alias found or if alias is for a different context.
+
+    Args:
+        session: Database session
+        identifier: The alias name to look up
+        context: The current context (must match for security)
+        target_type: Optional filter for 'user' or 'channel'
+    """
+    query = session.query(Alias).filter(
+        Alias.alias == identifier,
+        Alias.context == context,
+    )
+    if target_type is not None:
+        query = query.filter(Alias.target_type == target_type)
+    return query.first()

@@ -39,10 +39,16 @@ def handle_send(args: argparse.Namespace) -> None:
 
         if args.channel:
             channel_id = resolve_channel_id(
-                client, args.channel, session, context.workspace_id
+                client,
+                args.channel,
+                session,
+                context.workspace_id,
+                context.name,
             )
         elif args.user:
-            user_id = resolve_user_id(client, args.user, session, context.workspace_id)
+            user_id = resolve_user_id(
+                client, args.user, session, context.workspace_id, context.name
+            )
             channel_id = open_dm_channel(client, user_id)
             if channel_id is None:
                 raise ValueError(f"Failed to open DM with user '{args.user}'.")
@@ -119,7 +125,11 @@ def handle_read(args: argparse.Namespace) -> None:
 
         if args.channel:
             channel_id = resolve_channel_id(
-                client, args.channel, session, context.workspace_id
+                client,
+                args.channel,
+                session,
+                context.workspace_id,
+                context.name,
             )
 
             scopes = get_scopes_for_mode(context.app_type)
@@ -129,7 +139,9 @@ def handle_read(args: argparse.Namespace) -> None:
                 validate("groups:history", scopes, raise_on_error=True)
 
         elif args.user:
-            user_id = resolve_user_id(client, args.user, session, context.workspace_id)
+            user_id = resolve_user_id(
+                client, args.user, session, context.workspace_id, context.name
+            )
             channel_id = open_dm_channel(client, user_id)
             if channel_id is None:
                 raise ValueError(f"Failed to open DM with user '{args.user}'.")
@@ -269,10 +281,16 @@ def handle_react(args: argparse.Namespace) -> None:
 
         if args.channel:
             channel_id = resolve_channel_id(
-                client, args.channel, session, context.workspace_id
+                client,
+                args.channel,
+                session,
+                context.workspace_id,
+                context.name,
             )
         else:
-            user_id = resolve_user_id(client, args.user, session, context.workspace_id)
+            user_id = resolve_user_id(
+                client, args.user, session, context.workspace_id, context.name
+            )
             dm_channel = open_dm_channel(client, user_id)
             if dm_channel is None:
                 raise ValueError(f"Failed to open DM with user '{args.user}'.")
@@ -359,10 +377,16 @@ def handle_delete(args: argparse.Namespace) -> None:
 
         if args.channel:
             channel_id = resolve_channel_id(
-                client, args.channel, session, context.workspace_id
+                client,
+                args.channel,
+                session,
+                context.workspace_id,
+                context.name,
             )
         else:
-            user_id = resolve_user_id(client, args.user, session, context.workspace_id)
+            user_id = resolve_user_id(
+                client, args.user, session, context.workspace_id, context.name
+            )
             dm_channel = open_dm_channel(client, user_id)
             if dm_channel is None:
                 raise ValueError(f"Failed to open DM with user '{args.user}'.")
