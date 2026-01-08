@@ -42,4 +42,4 @@ Unique per (alias, context, target_type).
 ## Finalization
 
 - [x] Run all checks (ruff, mypy, tests)
-- [ ] Commit and update PR
+- [x] Commit and update PR
