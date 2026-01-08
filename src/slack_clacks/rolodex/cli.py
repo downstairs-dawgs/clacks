@@ -194,7 +194,7 @@ def generate_cli() -> argparse.ArgumentParser:
     add_parser.add_argument(
         "-o",
         "--outfile",
-        type=argparse.FileType("a"),
+        type=argparse.FileType("w"),
         default=sys.stdout,
         help="Output file for JSON results (default: stdout)",
     )
@@ -243,7 +243,7 @@ def generate_cli() -> argparse.ArgumentParser:
     list_parser.add_argument(
         "-o",
         "--outfile",
-        type=argparse.FileType("a"),
+        type=argparse.FileType("w"),
         default=sys.stdout,
         help="Output file for JSON results (default: stdout)",
     )
@@ -273,7 +273,7 @@ def generate_cli() -> argparse.ArgumentParser:
     remove_parser.add_argument(
         "-o",
         "--outfile",
-        type=argparse.FileType("a"),
+        type=argparse.FileType("w"),
         default=sys.stdout,
         help="Output file for JSON results (default: stdout)",
     )
@@ -291,7 +291,7 @@ def generate_cli() -> argparse.ArgumentParser:
     sync_parser.add_argument(
         "-o",
         "--outfile",
-        type=argparse.FileType("a"),
+        type=argparse.FileType("w"),
         default=sys.stdout,
         help="Output file for JSON results (default: stdout)",
     )
@@ -311,7 +311,7 @@ def generate_cli() -> argparse.ArgumentParser:
     platforminfo_parser.add_argument(
         "-o",
         "--outfile",
-        type=argparse.FileType("a"),
+        type=argparse.FileType("w"),
         default=sys.stdout,
         help="Output file for JSON results (default: stdout)",
     )

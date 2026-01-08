@@ -3,9 +3,10 @@ Database operations for rolodex.
 """
 
 from slack_sdk import WebClient
+from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.orm import Session
 
-from slack_clacks.rolodex.data import PLATFORM_TARGET_TYPES
+from slack_clacks.rolodex.data import CHANNEL, PLATFORM_TARGET_TYPES, SLACK, USER
 from slack_clacks.rolodex.models import Alias
 
 
@@ -36,37 +37,34 @@ def add_alias(
     target_id: str,
 ) -> Alias:
     """
-    Add or update an alias.
+    Add or update an alias using atomic upsert.
     Unique per (alias, context, target_type).
     """
     validate_platform_target_type(platform, target_type)
 
-    existing = (
-        session.query(Alias)
-        .filter(
-            Alias.alias == alias,
-            Alias.context == context,
-            Alias.target_type == target_type,
-        )
-        .first()
-    )
-
-    if existing:
-        existing.platform = platform
-        existing.target_id = target_id
-        session.flush()
-        return existing
-
-    new_alias = Alias(
+    stmt = insert(Alias).values(
         alias=alias,
         context=context,
         target_type=target_type,
         platform=platform,
         target_id=target_id,
     )
-    session.add(new_alias)
+    stmt = stmt.on_conflict_do_update(
+        index_elements=["alias", "context", "target_type"],
+        set_={"platform": stmt.excluded.platform, "target_id": stmt.excluded.target_id},
+    )
+    session.execute(stmt)
     session.flush()
-    return new_alias
+
+    return (
+        session.query(Alias)
+        .filter(
+            Alias.alias == alias,
+            Alias.context == context,
+            Alias.target_type == target_type,
+        )
+        .one()
+    )
 
 
 def get_alias(
@@ -138,6 +136,28 @@ def resolve_alias(
     return alias
 
 
+def _insert_alias_if_not_exists(
+    session: Session,
+    alias: str,
+    context: str,
+    target_type: str,
+    platform: str,
+    target_id: str,
+) -> None:
+    """Insert alias only if it doesn't exist. Preserves manual aliases during sync."""
+    stmt = insert(Alias).values(
+        alias=alias,
+        context=context,
+        target_type=target_type,
+        platform=platform,
+        target_id=target_id,
+    )
+    stmt = stmt.on_conflict_do_nothing(
+        index_elements=["alias", "context", "target_type"],
+    )
+    session.execute(stmt)
+
+
 def sync_from_slack(
     session: Session,
     client: WebClient,
@@ -146,6 +166,7 @@ def sync_from_slack(
     """
     Sync users and channels from Slack API to rolodex.
     Creates aliases using username/channel_name as the alias.
+    Preserves existing aliases (does not overwrite manual entries).
     Returns {"users": count, "channels": count}.
     """
     users_count = 0
@@ -161,12 +182,12 @@ def sync_from_slack(
                 continue
             username = member.get("name")
             if username:
-                add_alias(
+                _insert_alias_if_not_exists(
                     session,
                     alias=username,
                     context=context,
-                    target_type="user",
-                    platform="slack",
+                    target_type=USER,
+                    platform=SLACK,
                     target_id=member["id"],
                 )
                 users_count += 1
@@ -188,12 +209,12 @@ def sync_from_slack(
         for channel in response["channels"]:
             channel_name = channel.get("name")
             if channel_name:
-                add_alias(
+                _insert_alias_if_not_exists(
                     session,
                     alias=channel_name,
                     context=context,
-                    target_type="channel",
-                    platform="slack",
+                    target_type=CHANNEL,
+                    platform=SLACK,
                     target_id=channel["id"],
                 )
                 channels_count += 1
@@ -203,4 +224,5 @@ def sync_from_slack(
         if not cursor:
             break
 
+    session.flush()
     return {"users": users_count, "channels": channels_count}
