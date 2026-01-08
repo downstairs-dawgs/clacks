@@ -1,6 +1,6 @@
 [project]
 name = "slack-clacks"
-version = "0.4.2"
+version = "0.4.3"
 description = "the default mode of degenerate communication."
 readme = "README.md"
 license = { text = "MIT" }
