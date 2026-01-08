@@ -1,7 +1,7 @@
 """add aliases table
 
-Revision ID: b2c3d4e5f6g7
-Revises: a1b2c3d4e5f6
+Revision ID: a1b2c3d4e5f6
+Revises: 6713eb6c63d1
 Create Date: 2026-01-08 12:00:00.000000
 
 """
@@ -12,22 +12,27 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "b2c3d4e5f6g7"
-down_revision: Union[str, Sequence[str], None] = "a1b2c3d4e5f6"
+revision: str = "a1b2c3d4e5f6"
+down_revision: Union[str, Sequence[str], None] = "6713eb6c63d1"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    """Create aliases table."""
+    """Create aliases table with FK to contexts."""
     op.create_table(
         "aliases",
         sa.Column("alias", sa.String(), nullable=False),
+        sa.Column("context", sa.String(), nullable=False),
+        sa.Column("target_type", sa.String(), nullable=False),
         sa.Column("platform", sa.String(), nullable=False),
         sa.Column("target_id", sa.String(), nullable=False),
-        sa.Column("target_type", sa.String(), nullable=False),
-        sa.Column("context", sa.String(), nullable=False),
-        sa.PrimaryKeyConstraint("alias"),
+        sa.ForeignKeyConstraint(
+            ["context"],
+            ["contexts.name"],
+            ondelete="CASCADE",
+        ),
+        sa.PrimaryKeyConstraint("alias", "context", "target_type"),
     )
     op.create_index(
         "ix_aliases_platform_target",
