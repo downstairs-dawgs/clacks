@@ -41,14 +41,20 @@ def resolve_channel_id(
         if alias:
             return alias.target_id
 
-    # Fall back to API call
+    # Fall back to API call with pagination
     try:
-        response = client.conversations_list(
-            types="public_channel,private_channel", limit=1000
-        )
-        for channel in response["channels"]:
-            if channel["name"] == channel_name:
-                return channel["id"]
+        cursor: str | None = None
+        while True:
+            response = client.conversations_list(
+                types="public_channel,private_channel", limit=200, cursor=cursor
+            )
+            for channel in response["channels"]:
+                if channel["name"] == channel_name:
+                    return channel["id"]
+            response_metadata = response.get("response_metadata")
+            cursor = response_metadata.get("next_cursor") if response_metadata else None
+            if not cursor:
+                break
     except SlackApiError as e:
         raise ClacksChannelNotFoundError(channel_identifier) from e
 
@@ -84,16 +90,22 @@ def resolve_user_id(
         if alias:
             return alias.target_id
 
-    # Fall back to API call
+    # Fall back to API call with pagination
     try:
-        response = client.users_list()
-        for user in response["members"]:
-            if (
-                user.get("name") == username
-                or user.get("real_name") == username
-                or user.get("profile", {}).get("email") == user_identifier
-            ):
-                return user["id"]
+        cursor: str | None = None
+        while True:
+            response = client.users_list(cursor=cursor, limit=200)
+            for user in response["members"]:
+                if (
+                    user.get("name") == username
+                    or user.get("real_name") == username
+                    or user.get("profile", {}).get("email") == user_identifier
+                ):
+                    return user["id"]
+            response_metadata = response.get("response_metadata")
+            cursor = response_metadata.get("next_cursor") if response_metadata else None
+            if not cursor:
+                break
     except SlackApiError as e:
         raise ClacksUserNotFoundError(user_identifier) from e
 
