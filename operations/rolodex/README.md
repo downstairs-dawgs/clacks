@@ -1,101 +1,61 @@
-# Rolodex Implementation Plan
+# Rolodex Implementation
 
 ## Overview
 
-Implement a local database cache (rolodex) for user and channel metadata, enabling fast offline-first resolution. This addresses issues #38, #50, #18, #26, #37.
+Local alias database for resolving human-friendly names to platform-specific IDs. Supports multiple platforms (Slack, GitHub) with platform-specific target types.
 
 ## Database Schema
 
-### Users table (`rolodex_users`)
+Single table: `aliases`
 
 | Column | Type | Notes |
 |--------|------|-------|
-| user_id | String | Primary key (e.g., U0876FVQ58C) |
-| workspace_id | String | Foreign key to contexts.workspace_id, part of composite uniqueness |
-| username | String | Indexed (e.g., "nkashy1") |
-| real_name | String | Display name |
-| email | String | Indexed |
-| last_updated | DateTime | For staleness tracking |
+| alias | String | Primary key (composite) |
+| context | String | Primary key (composite) - auth context name |
+| target_type | String | Primary key (composite) - e.g., user, channel |
+| platform | String | Platform name (slack, github) |
+| target_id | String | Platform-specific ID (e.g., U0876FVQ58C) |
 
-Unique constraint: (user_id, workspace_id)
+Unique constraint: (alias, context, target_type)
 
-### Channels table (`rolodex_channels`)
+## Platforms and Target Types
 
-| Column | Type | Notes |
-|--------|------|-------|
-| channel_id | String | Primary key (e.g., C08740LGAE6) |
-| workspace_id | String | Foreign key to contexts.workspace_id, part of composite uniqueness |
-| channel_name | String | Indexed (e.g., "general") |
-| is_private | Boolean | Channel visibility |
-| last_updated | DateTime | For staleness tracking |
+Defined in `rolodex/data.py`:
 
-Unique constraint: (channel_id, workspace_id)
+- **slack**: user, channel
+- **github**: user, repo, org
 
 ## CLI Commands
 
-All commands under `clacks rolodex`:
-
 ```bash
-# Add entries manually
-clacks rolodex add user <username> <user_id>
-clacks rolodex add user --email <email> <user_id>
-clacks rolodex add channel <channel_name> <channel_id>
-
-# List entries
-clacks rolodex list users
-clacks rolodex list channels
-
-# Search entries
-clacks rolodex search users <query>
-clacks rolodex search channels <query>
-
-# Sync from Slack API (clacks mode - requires full scopes)
-clacks rolodex sync users
-clacks rolodex sync channels
-clacks rolodex sync  # sync all
-
-# Remove entries
-clacks rolodex remove user <identifier>
-clacks rolodex remove channel <identifier>
-
-# Clear all cached data
-clacks rolodex clear
+clacks rolodex add <alias> -t <target-id> -T <target-type> [-p <platform>]
+clacks rolodex list [-p <platform>] [-T <target-type>] [-t <target-id>]
+clacks rolodex remove <alias> -T <target-type>
+clacks rolodex sync
+clacks rolodex platforminfo -p <platform>
 ```
 
-## Resolution Flow Updates
+## Resolution Flow
 
-Update `resolve_user_id` and `resolve_channel_id` in `messaging/operations.py`:
+`resolve_user_id` and `resolve_channel_id` in `messaging/operations.py`:
 
-1. Check rolodex cache first (for current workspace)
-2. On cache miss, attempt API call (existing behavior)
-3. On successful API resolution, cache result in rolodex
-4. Return resolution or error
+1. Check if already a Slack ID (U..., C..., D..., G...)
+2. Check rolodex aliases (filtered by platform)
+3. Fall back to Slack API
 
 ## File Structure
 
 ```
-src/slack_clacks/
-  rolodex/
-    __init__.py
-    models.py      # SQLAlchemy models for rolodex tables
-    operations.py  # Database operations (add, get, search, sync)
-    cli.py         # CLI commands
-  alembic/versions/
-    xxxx_add_rolodex_tables.py  # Migration
+src/slack_clacks/rolodex/
+  __init__.py
+  data.py        # Platform and target type constants
+  models.py      # SQLAlchemy Alias model
+  operations.py  # Database operations
+  cli.py         # CLI commands
 ```
-
-## Implementation Checklist
-
-See [checklist.md](./checklist.md) for detailed implementation steps.
-
-## Version
-
-This feature warrants a minor version bump: 0.3.3 -> 0.4.0
 
 ## Related Issues
 
 - #38 - clacks rolodex (design doc)
 - #50 - Add user and channel lookup commands
 - #18 - Cache channel and user metadata in database
-- #26 - User feedback: Difficulty finding channels/users
-- #37 - User names are just text
