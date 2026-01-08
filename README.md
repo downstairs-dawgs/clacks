@@ -3,19 +3,38 @@ the default mode of degenerate communication.
 
 ## Installation
 
-**Recommended** - install globally with uv (best for use with coding agents like Claude Code, Cursor):
-```bash
-uv tool install slack-clacks
-```
+Choose your preferred method:
 
-**Alternative** - run directly without installation:
+**With uv** (no installation required):
 ```bash
 uvx --from slack-clacks clacks
 ```
 
-**Alternative** - works with pip, poetry, or any package manager:
+**With uv** (permanent installation):
+```bash
+uv tool install slack-clacks
+```
+
+**With pip/pipx/poetry**:
 ```bash
 pip install slack-clacks
+# or: pipx install slack-clacks
+```
+
+Examples below use `clacks` directly. If using `uvx`, prefix commands with `uvx --from slack-clacks`.
+
+## Updating
+
+**With uvx**: Updates happen automatically (always runs latest version).
+
+**With uv tool**:
+```bash
+uv tool upgrade slack-clacks
+```
+
+**With pip**:
+```bash
+pip install --upgrade slack-clacks
 ```
 
 ## Authentication
