@@ -26,19 +26,21 @@ MODE_PATHS: dict[str, str] = {
 
 def handle_skill(args: argparse.Namespace) -> None:
     """Handle skill command."""
-    if args.mode is None:
+    # Determine output path
+    if args.outdir is not None:
+        outdir = Path(args.outdir).expanduser()
+        path = outdir / "SKILL.md"
+    elif args.mode is not None:
+        if args.mode not in MODE_PATHS:
+            valid_modes = ", ".join(sorted(MODE_PATHS.keys()))
+            print(f"Unknown mode: {args.mode}", file=sys.stderr)
+            print(f"Valid modes: {valid_modes}", file=sys.stderr)
+            sys.exit(1)
+        path = Path(MODE_PATHS[args.mode]).expanduser()
+    else:
         # Default: print to stdout
         print(SKILL_MD)
         return
-
-    if args.mode not in MODE_PATHS:
-        valid_modes = ", ".join(sorted(MODE_PATHS.keys()))
-        print(f"Unknown mode: {args.mode}", file=sys.stderr)
-        print(f"Valid modes: {valid_modes}", file=sys.stderr)
-        sys.exit(1)
-
-    path_str = MODE_PATHS[args.mode]
-    path = Path(path_str).expanduser()
 
     # Check if parent directory exists
     if not path.parent.exists():
@@ -65,6 +67,13 @@ def generate_cli() -> argparse.ArgumentParser:
         choices=list(MODE_PATHS.keys()),
         default=None,
         help="Installation mode. Without this flag, prints SKILL.md to stdout.",
+    )
+    parser.add_argument(
+        "-o",
+        "--outdir",
+        type=str,
+        default=None,
+        help="Output directory for SKILL.md (writes SKILL.md to this path).",
     )
     parser.add_argument(
         "-f",
