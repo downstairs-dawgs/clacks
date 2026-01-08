@@ -40,8 +40,13 @@ def handle_skill(args: argparse.Namespace) -> None:
     path_str = MODE_PATHS[args.mode]
     path = Path(path_str).expanduser()
 
-    # Create parent directories
-    path.parent.mkdir(parents=True, exist_ok=True)
+    # Check if parent directory exists
+    if not path.parent.exists():
+        if not args.force:
+            print(f"Directory does not exist: {path.parent}", file=sys.stderr)
+            print("Use --force to create it", file=sys.stderr)
+            sys.exit(1)
+        path.parent.mkdir(parents=True, exist_ok=True)
 
     # Write SKILL.md
     path.write_text(SKILL_MD)
@@ -60,6 +65,12 @@ def generate_cli() -> argparse.ArgumentParser:
         choices=list(MODE_PATHS.keys()),
         default=None,
         help="Installation mode. Without this flag, prints SKILL.md to stdout.",
+    )
+    parser.add_argument(
+        "-f",
+        "--force",
+        action="store_true",
+        help="Create parent directories if they don't exist.",
     )
     parser.set_defaults(func=handle_skill)
     return parser
