@@ -16,40 +16,30 @@ def resolve_channel_id(
     client: WebClient,
     channel_identifier: str,
     session: Session | None = None,
-    workspace_id: str | None = None,
     context_name: str | None = None,
 ) -> str:
     """
     Resolve channel identifier to channel ID.
-    Accepts channel ID (C...), channel name (#general or general), or alias.
+    Accepts channel ID (C..., D..., G...), channel name (#general or general), or alias.
     Returns channel ID or raises ClacksChannelNotFoundError if not found.
 
     Resolution order:
-    1. Check if already a Slack channel ID (C... or D...)
+    1. Check if already a Slack channel ID (C..., D..., G...)
     2. Check aliases (if session and context_name provided)
-    3. Check rolodex cache (if session and workspace_id provided)
-    4. Fall back to Slack API
+    3. Fall back to Slack API
     """
-    if channel_identifier.startswith("C") or channel_identifier.startswith("D"):
+    if channel_identifier.startswith(("C", "D", "G")):
         return channel_identifier
+
+    channel_name = channel_identifier.lstrip("#")
 
     # Check aliases first (requires context for security)
     if session is not None and context_name is not None:
         from slack_clacks.rolodex.operations import resolve_alias
 
-        alias = resolve_alias(session, channel_identifier, context_name, "channel")
+        alias = resolve_alias(session, channel_name, context_name, "channel")
         if alias:
             return alias.target_id
-
-    channel_name = channel_identifier.lstrip("#")
-
-    # Check rolodex cache if session provided
-    if session is not None and workspace_id is not None:
-        from slack_clacks.rolodex.operations import add_channel, get_channel
-
-        cached = get_channel(session, workspace_id, channel_name)
-        if cached:
-            return cached.channel_id
 
     # Fall back to API call
     try:
@@ -58,15 +48,6 @@ def resolve_channel_id(
         )
         for channel in response["channels"]:
             if channel["name"] == channel_name:
-                # Cache successful resolution
-                if session is not None and workspace_id is not None:
-                    add_channel(
-                        session,
-                        workspace_id=workspace_id,
-                        channel_id=channel["id"],
-                        channel_name=channel["name"],
-                        is_private=channel.get("is_private", False),
-                    )
                 return channel["id"]
     except SlackApiError as e:
         raise ClacksChannelNotFoundError(channel_identifier) from e
@@ -78,7 +59,6 @@ def resolve_user_id(
     client: WebClient,
     user_identifier: str,
     session: Session | None = None,
-    workspace_id: str | None = None,
     context_name: str | None = None,
 ) -> str:
     """
@@ -89,29 +69,20 @@ def resolve_user_id(
     Resolution order:
     1. Check if already a Slack user ID (U...)
     2. Check aliases (if session and context_name provided)
-    3. Check rolodex cache (if session and workspace_id provided)
-    4. Fall back to Slack API
+    3. Fall back to Slack API
     """
     if user_identifier.startswith("U"):
         return user_identifier
+
+    username = user_identifier.lstrip("@")
 
     # Check aliases first (requires context for security)
     if session is not None and context_name is not None:
         from slack_clacks.rolodex.operations import resolve_alias
 
-        alias = resolve_alias(session, user_identifier, context_name, "user")
+        alias = resolve_alias(session, username, context_name, "user")
         if alias:
             return alias.target_id
-
-    username = user_identifier.lstrip("@")
-
-    # Check rolodex cache if session provided
-    if session is not None and workspace_id is not None:
-        from slack_clacks.rolodex.operations import add_user, get_user
-
-        cached = get_user(session, workspace_id, user_identifier)
-        if cached:
-            return cached.user_id
 
     # Fall back to API call
     try:
@@ -122,17 +93,6 @@ def resolve_user_id(
                 or user.get("real_name") == username
                 or user.get("profile", {}).get("email") == user_identifier
             ):
-                # Cache successful resolution
-                if session is not None and workspace_id is not None:
-                    profile = user.get("profile", {})
-                    add_user(
-                        session,
-                        workspace_id=workspace_id,
-                        user_id=user["id"],
-                        username=user.get("name"),
-                        real_name=user.get("real_name"),
-                        email=profile.get("email") if profile else None,
-                    )
                 return user["id"]
     except SlackApiError as e:
         raise ClacksUserNotFoundError(user_identifier) from e
