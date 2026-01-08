@@ -16,105 +16,104 @@ Use the `clacks` CLI to interact with Slack workspaces.
 
 ## Prerequisites
 
-Install clacks and authenticate:
+Authenticate with your Slack workspace:
 ```bash
-uv tool install slack-clacks
-clacks auth login -c <context-name>
+uvx --from slack-clacks clacks auth login -c <context-name>
 ```
 
 ## Sending Messages
 
 Send to channel:
 ```bash
-clacks send -c "#general" -m "Hello world"
-clacks send -c "C123456" -m "Hello world"
+uvx --from slack-clacks clacks send -c "#general" -m "Hello world"
+uvx --from slack-clacks clacks send -c "C123456" -m "Hello world"
 ```
 
 Send direct message:
 ```bash
-clacks send -u "@username" -m "Hello"
-clacks send -u "U123456" -m "Hello"
+uvx --from slack-clacks clacks send -u "@username" -m "Hello"
+uvx --from slack-clacks clacks send -u "U123456" -m "Hello"
 ```
 
 Reply to thread:
 ```bash
-clacks send -c "#general" -m "Reply text" -t "1234567890.123456"
+uvx --from slack-clacks clacks send -c "#general" -m "Reply text" -t "1234567890.123456"
 ```
 
 ## Reading Messages
 
 Read from channel:
 ```bash
-clacks read -c "#general"
-clacks read -c "#general" -l 50
+uvx --from slack-clacks clacks read -c "#general"
+uvx --from slack-clacks clacks read -c "#general" -l 50
 ```
 
 Read DMs:
 ```bash
-clacks read -u "@username"
+uvx --from slack-clacks clacks read -u "@username"
 ```
 
 Read thread:
 ```bash
-clacks read -c "#general" -t "1234567890.123456"
+uvx --from slack-clacks clacks read -c "#general" -t "1234567890.123456"
 ```
 
 ## Recent Activity
 
 View recent messages across all conversations:
 ```bash
-clacks recent
-clacks recent -l 50
+uvx --from slack-clacks clacks recent
+uvx --from slack-clacks clacks recent -l 50
 ```
 
 ## Reactions
 
 Add emoji reaction:
 ```bash
-clacks react -c "#general" -m "1234567890.123456" -e ":thumbsup:"
+uvx --from slack-clacks clacks react -c "#general" -m "123456.123" -e ":+1:"
 ```
 
 Remove reaction:
 ```bash
-clacks react -c "#general" -m "1234567890.123456" -e ":thumbsup:" --remove
+uvx --from slack-clacks clacks react -c "#general" -m "123456.123" -e ":+1:" --remove
 ```
 
 ## Delete Messages
 
 Delete a message (your own messages only):
 ```bash
-clacks delete -c "#general" -m "1234567890.123456"
+uvx --from slack-clacks clacks delete -c "#general" -m "1234567890.123456"
 ```
 
 ## Rolodex (Aliases)
 
 Sync users and channels from Slack:
 ```bash
-clacks rolodex sync
+uvx --from slack-clacks clacks rolodex sync
 ```
 
 List aliases:
 ```bash
-clacks rolodex list
-clacks rolodex list -T user
-clacks rolodex list -T channel
+uvx --from slack-clacks clacks rolodex list
+uvx --from slack-clacks clacks rolodex list -T user
+uvx --from slack-clacks clacks rolodex list -T channel
 ```
 
 ## Context Management
 
 List available contexts:
 ```bash
-clacks config contexts
+uvx --from slack-clacks clacks config contexts
 ```
 
 Switch context:
 ```bash
-clacks config switch -C <context-name>
+uvx --from slack-clacks clacks config switch -C <context-name>
 ```
 
 View current config:
 ```bash
-clacks config info
+uvx --from slack-clacks clacks config info
 ```
 
 ## Output
