@@ -13,8 +13,8 @@ from slack_clacks.configuration.database import (
     get_current_context,
     get_session,
 )
+from slack_clacks.rolodex.data import PLATFORM_TARGET_TYPES
 from slack_clacks.rolodex.operations import (
-    PLATFORM_TARGET_TYPES,
     add_alias,
     get_platform_target_types,
     list_aliases,

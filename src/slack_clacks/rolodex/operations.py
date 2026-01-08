@@ -5,13 +5,8 @@ Database operations for rolodex.
 from slack_sdk import WebClient
 from sqlalchemy.orm import Session
 
+from slack_clacks.rolodex.data import PLATFORM_TARGET_TYPES
 from slack_clacks.rolodex.models import Alias
-
-# Valid target types per platform
-PLATFORM_TARGET_TYPES: dict[str, list[str]] = {
-    "slack": ["user", "channel"],
-    "github": ["user", "repo", "org"],
-}
 
 
 def get_platform_target_types(platform: str) -> list[str] | None:
