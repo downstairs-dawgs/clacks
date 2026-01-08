@@ -194,6 +194,37 @@ clacks rolodex platforminfo -p slack
 clacks rolodex platforminfo -p github
 ```
 
+## Agent Skills
+
+clacks supports the [Agent Skills](https://agentskills.io) open standard for AI coding assistants.
+
+Print SKILL.md to stdout:
+```bash
+clacks skill
+```
+
+Install for Claude Code (global):
+```bash
+clacks skill --mode claude
+```
+
+Install for OpenAI Codex (global):
+```bash
+clacks skill --mode codex
+```
+
+Install for Cursor/Windsurf/Aider (global):
+```bash
+clacks skill --mode universal
+```
+
+Install for VS Code Copilot (project):
+```bash
+clacks skill --mode github
+```
+
+All modes support `-global` and `-project` suffixes (e.g., `claude-project`, `codex-global`).
+
 ## Output
 
 All commands output JSON to stdout. Redirect to file:

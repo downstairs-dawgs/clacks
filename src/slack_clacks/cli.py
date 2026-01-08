@@ -11,6 +11,7 @@ from slack_clacks.messaging.cli import (
     generate_send_parser,
 )
 from slack_clacks.rolodex.cli import generate_cli as generate_rolodex_cli
+from slack_clacks.skill.cli import generate_cli as generate_skill_cli
 
 
 def generate_cli() -> argparse.ArgumentParser:
@@ -84,6 +85,14 @@ def generate_cli() -> argparse.ArgumentParser:
         parents=[delete_parser],
         add_help=False,
         help=delete_parser.description,
+    )
+
+    skill_parser = generate_skill_cli()
+    subparsers.add_parser(
+        "skill",
+        parents=[skill_parser],
+        add_help=False,
+        help=skill_parser.description,
     )
 
     return parser
