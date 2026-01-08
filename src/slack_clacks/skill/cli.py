@@ -11,16 +11,16 @@ from slack_clacks.skill.content import SKILL_MD
 # Mode -> path mapping
 # Global paths use ~ expansion, project paths are relative to cwd
 MODE_PATHS: dict[str, str] = {
-    "claude": "~/.claude/skills/slack/SKILL.md",
-    "claude-global": "~/.claude/skills/slack/SKILL.md",
-    "claude-project": ".claude/skills/slack/SKILL.md",
-    "codex": "~/.codex/skills/slack/SKILL.md",
-    "codex-global": "~/.codex/skills/slack/SKILL.md",
-    "codex-project": ".codex/skills/slack/SKILL.md",
-    "universal": "~/.agent/skills/slack/SKILL.md",
-    "universal-global": "~/.agent/skills/slack/SKILL.md",
-    "universal-project": ".agent/skills/slack/SKILL.md",
-    "github": ".github/skills/slack/SKILL.md",
+    "claude": "~/.claude/skills/clacks/SKILL.md",
+    "claude-global": "~/.claude/skills/clacks/SKILL.md",
+    "claude-project": ".claude/skills/clacks/SKILL.md",
+    "codex": "~/.codex/skills/clacks/SKILL.md",
+    "codex-global": "~/.codex/skills/clacks/SKILL.md",
+    "codex-project": ".codex/skills/clacks/SKILL.md",
+    "universal": "~/.agent/skills/clacks/SKILL.md",
+    "universal-global": "~/.agent/skills/clacks/SKILL.md",
+    "universal-project": ".agent/skills/clacks/SKILL.md",
+    "github": ".github/skills/clacks/SKILL.md",
 }
 
 

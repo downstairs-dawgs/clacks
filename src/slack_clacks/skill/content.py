@@ -4,7 +4,7 @@ SKILL.md content for clacks.
 
 SKILL_MD = """\
 ---
-name: slack
+name: clacks
 description: >-
   Send and read Slack messages using clacks CLI.
   Use when user asks to send Slack messages, read channels, or interact with Slack.
