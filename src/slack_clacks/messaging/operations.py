@@ -37,7 +37,7 @@ def resolve_channel_id(
     if session is not None and context_name is not None:
         from slack_clacks.rolodex.operations import resolve_alias
 
-        alias = resolve_alias(session, channel_name, context_name, "channel")
+        alias = resolve_alias(session, channel_name, context_name, "channel", "slack")
         if alias:
             return alias.target_id
 
@@ -80,7 +80,7 @@ def resolve_user_id(
     if session is not None and context_name is not None:
         from slack_clacks.rolodex.operations import resolve_alias
 
-        alias = resolve_alias(session, username, context_name, "user")
+        alias = resolve_alias(session, username, context_name, "user", "slack")
         if alias:
             return alias.target_id
 

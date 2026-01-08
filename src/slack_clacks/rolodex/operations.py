@@ -132,9 +132,15 @@ def resolve_alias(
     identifier: str,
     context: str,
     target_type: str,
+    platform: str | None = None,
 ) -> Alias | None:
     """Resolve an identifier to an alias in the current context."""
-    return get_alias(session, identifier, context, target_type)
+    alias = get_alias(session, identifier, context, target_type)
+    if alias is None:
+        return None
+    if platform is not None and alias.platform != platform:
+        return None
+    return alias
 
 
 def sync_from_slack(
