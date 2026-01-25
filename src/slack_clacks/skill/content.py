@@ -6,8 +6,8 @@ SKILL_MD = """\
 ---
 name: clacks
 description: >-
-  Send and read Slack messages using clacks CLI.
-  Use when user asks to send Slack messages, read channels, or interact with Slack.
+  Send and read Slack messages using clacks CLI. Use when user asks to send
+  Slack messages, read channels, wait for responses, or interact with Slack.
 ---
 
 # Slack Integration via Clacks
@@ -102,6 +102,54 @@ uvx --from slack-clacks clacks rolodex list -T user
 uvx --from slack-clacks clacks rolodex list -T channel
 ```
 
+## Listening for Messages
+
+Listen for new messages in a channel (outputs NDJSON, one message per line):
+```bash
+uvx --from slack-clacks clacks listen "#general"
+```
+
+Listen with history (fetch last N messages first):
+```bash
+uvx --from slack-clacks clacks listen "#general" --include-history 5
+```
+
+Listen to thread replies:
+```bash
+uvx --from slack-clacks clacks listen "#general" --thread "1234567890.123456"
+```
+
+Filter by sender (wait for response from specific user):
+```bash
+uvx --from slack-clacks clacks listen "#general" --from "@username"
+```
+
+Set timeout (exit after N seconds):
+```bash
+uvx --from slack-clacks clacks listen "#general" --timeout 300
+```
+
+Options:
+- `--interval SECONDS` - Poll interval (default: 2.0)
+- `--include-bots` - Include bot messages (excluded by default)
+- `-o FILE` - Write to file instead of stdout
+
+### When to Use Listen
+
+Use `clacks listen` when:
+- Waiting for a response from someone after sending a message
+- Monitoring a channel for new activity
+- Waiting for a specific user to reply in a thread
+
+Example workflow - send message and wait for reply:
+```bash
+# Send a message
+uvx --from slack-clacks clacks send -c "#general" -m "Question for @alice"
+
+# Wait for alice's response (timeout after 5 minutes)
+uvx --from slack-clacks clacks listen "#general" --from "@alice" --timeout 300
+```
+
 ## Context Management
 
 List available contexts:
@@ -122,4 +170,5 @@ uvx --from slack-clacks clacks config info
 ## Output
 
 All commands output JSON to stdout.
+The `listen` command outputs NDJSON (one JSON object per line).
 """
