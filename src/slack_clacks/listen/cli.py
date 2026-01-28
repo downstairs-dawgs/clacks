@@ -50,6 +50,7 @@ def handle_listen(args: argparse.Namespace) -> None:
                 interval=args.interval,
                 timeout=args.timeout,
                 include_history=args.include_history,
+                continuous=args.continuous,
             ):
                 # Filter by from_user if specified
                 if from_user_id and msg.get("user") != from_user_id:
@@ -124,6 +125,11 @@ def generate_listen_parser() -> argparse.ArgumentParser:
         "--include-bots",
         action="store_true",
         help="Include bot messages (excluded by default)",
+    )
+    parser.add_argument(
+        "--continuous",
+        action="store_true",
+        help="Keep listening after receiving messages (default: exit after first)",
     )
     parser.add_argument(
         "-o",
