@@ -222,5 +222,97 @@ class TestListenChannelEdgeCases(unittest.TestCase):
         self.assertEqual(messages[0]["text"], "new reply")
 
 
+class TestContinuousMode(unittest.TestCase):
+    def setUp(self):
+        self.client = MagicMock()
+
+    def test_default_exits_after_first_message(self):
+        """Without continuous=True, should exit after first message."""
+        ts1 = make_ts(100)
+        ts2 = make_ts(200)
+        self.client.conversations_history.side_effect = [
+            {"messages": [{"ts": ts1, "text": "first"}]},
+            {"messages": [{"ts": ts2, "text": "second"}]},
+        ] + [{"messages": []}] * 10
+
+        gen = listen_channel(
+            self.client,
+            channel_id="C123",
+            interval=0.01,
+            timeout=0.1,
+            include_history=0,
+            continuous=False,
+        )
+
+        messages = list(gen)
+        # Should only get first message then exit
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(messages[0]["text"], "first")
+
+    def test_continuous_keeps_running(self):
+        """With continuous=True, should keep receiving messages."""
+        ts1 = make_ts(100)
+        ts2 = make_ts(200)
+        self.client.conversations_history.side_effect = [
+            {"messages": [{"ts": ts1, "text": "first"}]},
+            {"messages": [{"ts": ts2, "text": "second"}]},
+        ] + [{"messages": []}] * 10
+
+        gen = listen_channel(
+            self.client,
+            channel_id="C123",
+            interval=0.01,
+            timeout=0.05,
+            include_history=0,
+            continuous=True,
+        )
+
+        messages = list(gen)
+        # Should get both messages
+        self.assertEqual(len(messages), 2)
+
+
+class TestRateLimitHandling(unittest.TestCase):
+    def setUp(self):
+        self.client = MagicMock()
+
+    def test_retries_on_rate_limit(self):
+        """Should retry with backoff when rate limited."""
+        from slack_sdk.errors import SlackApiError
+        from slack_clacks.listen.operations import _call_with_backoff
+
+        mock_response = MagicMock()
+        mock_response.get.return_value = "ratelimited"
+        mock_response.headers = {"Retry-After": "0"}
+
+        call_count = 0
+
+        def mock_func(**kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count < 3:
+                raise SlackApiError("rate limited", mock_response)
+            return {"messages": []}
+
+        result = _call_with_backoff(mock_func, max_retries=5, base_delay=0.01)
+        self.assertEqual(call_count, 3)
+        self.assertEqual(result, {"messages": []})
+
+    def test_raises_after_max_retries(self):
+        """Should raise after max retries exhausted."""
+        from slack_sdk.errors import SlackApiError
+        from slack_clacks.listen.operations import _call_with_backoff
+
+        mock_response = MagicMock()
+        mock_response.get.return_value = "ratelimited"
+        mock_response.headers = {"Retry-After": "0"}
+
+        def mock_func(**kwargs):
+            raise SlackApiError("rate limited", mock_response)
+
+        with self.assertRaises(SlackApiError):
+            _call_with_backoff(mock_func, max_retries=2, base_delay=0.01)
+
+
 if __name__ == "__main__":
     unittest.main()
