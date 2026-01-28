@@ -78,19 +78,26 @@ def listen_channel(
 
         time.sleep(interval)
 
+        # Add epsilon to make oldest exclusive (Slack's oldest is inclusive)
+        exclusive_oldest = str(float(latest_ts) + 0.000001)
+
         if thread_ts:
             response = client.conversations_replies(
-                channel=channel_id, ts=thread_ts, oldest=latest_ts
+                channel=channel_id, ts=thread_ts, oldest=exclusive_oldest
             )
             messages = response.get("messages", [])
             # Filter out parent and already-seen messages
-            messages = [m for m in messages if m.get("ts", "") > latest_ts]
+            messages = [
+                m
+                for m in messages
+                if m.get("ts") != thread_ts and m.get("ts", "") > latest_ts
+            ]
         else:
             response = client.conversations_history(
-                channel=channel_id, oldest=latest_ts
+                channel=channel_id, oldest=exclusive_oldest
             )
             messages = response.get("messages", [])
-            # Filter out already-seen messages (oldest is exclusive in our usage)
+            # Filter already-seen messages (defensive deduplication)
             messages = [m for m in messages if m.get("ts", "") > latest_ts]
 
         # Messages come in reverse chronological order, reverse to chronological
