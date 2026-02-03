@@ -240,7 +240,16 @@ def spawn_claude_with_skill(
     message_json = json.dumps(message)
 
     # Construct command using -p (print mode) and --system-prompt
-    cmd = ["claude", "-p", "--system-prompt", skill_content, message_json]
+    # Use --permission-mode acceptEdits to auto-approve Bash commands
+    cmd = [
+        "claude",
+        "-p",
+        "--permission-mode",
+        "acceptEdits",
+        "--system-prompt",
+        skill_content,
+        message_json,
+    ]
 
     # Determine working directory
     work_dir = cwd if cwd else None
