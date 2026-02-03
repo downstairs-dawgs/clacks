@@ -96,6 +96,7 @@ def listen_channel(
 
         for msg in messages:
             msg["received_at"] = datetime.now(timezone.utc).isoformat()
+            msg["channel"] = channel_id
             yield msg
             # Track latest timestamp seen
             msg_ts = msg.get("ts")
@@ -147,6 +148,7 @@ def listen_channel(
 
         for msg in messages:
             msg["received_at"] = datetime.now(timezone.utc).isoformat()
+            msg["channel"] = channel_id
             yield msg
             # Track latest timestamp seen
             msg_ts = msg.get("ts")
