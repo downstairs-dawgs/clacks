@@ -173,7 +173,7 @@ def generate_listen_parser() -> argparse.ArgumentParser:
         type=str,
         help=(
             "Execute Claude Code with this skill for each message "
-            "(skill name or path to SKILL.md)"
+            "(path to SKILL.md or skill name)"
         ),
     )
     parser.add_argument(

@@ -158,22 +158,50 @@ def listen_channel(
                 return
 
 
-def resolve_skill_parameter(skill_param: str) -> tuple[str, str]:
+def load_skill_content(skill_param: str) -> str:
     """
-    Determine if skill_param is a file path or skill name.
+    Load skill content from file path or skill name.
 
     Args:
-        skill_param: Skill name or path to SKILL.md file
+        skill_param: Path to SKILL.md file OR skill name (e.g., "slack-summarizer")
 
     Returns:
-        (command_flag, value) tuple:
-        - ("--skill-file", abs_path) if it's a file
-        - ("--skill", skill_name) otherwise
+        Content of the skill file
+
+    Raises:
+        FileNotFoundError: If skill file doesn't exist
     """
+    # First check if it's a real path that exists on disk
     if os.path.exists(skill_param):
-        return ("--skill-file", os.path.abspath(skill_param))
-    else:
-        return ("--skill", skill_param)
+        # It's a file path - use it directly
+        abs_path = os.path.abspath(skill_param)
+        with open(abs_path, "r") as f:
+            return f.read()
+
+    # Not a real path - treat as skill name
+    # Try in ~/.claude/skills/
+    home = os.path.expanduser("~")
+    skill_path = os.path.join(home, ".claude", "skills", skill_param, "SKILL.md")
+
+    if os.path.exists(skill_path):
+        with open(skill_path, "r") as f:
+            return f.read()
+
+    # Try in .claude/skills/ (project local)
+    local_skill_path = os.path.join(".claude", "skills", skill_param, "SKILL.md")
+
+    if os.path.exists(local_skill_path):
+        with open(local_skill_path, "r") as f:
+            return f.read()
+
+    # Not found anywhere
+    raise FileNotFoundError(
+        f"Skill not found: {skill_param}\n"
+        f"Tried:\n"
+        f"  - {skill_param} (as file path)\n"
+        f"  - {skill_path} (global skills)\n"
+        f"  - {local_skill_path} (project skills)"
+    )
 
 
 def spawn_claude_with_skill(
@@ -187,7 +215,7 @@ def spawn_claude_with_skill(
 
     Args:
         message: Full message dict (will be serialized to JSON)
-        skill_param: Skill name or path to SKILL.md
+        skill_param: Path to SKILL.md file or skill name (e.g., "slack-summarizer")
         cwd: Working directory for Claude (default: current directory)
         timeout: Timeout in seconds (default: None = no timeout)
 
@@ -195,7 +223,7 @@ def spawn_claude_with_skill(
         Exit code from Claude process (0 = success)
 
     Raises:
-        FileNotFoundError: If claude command not found in PATH
+        FileNotFoundError: If claude command not found in PATH or skill file missing
     """
     # Check if claude command exists
     claude_path = shutil.which("claude")
@@ -205,14 +233,14 @@ def spawn_claude_with_skill(
             "Install Claude Code from https://claude.ai/download"
         )
 
-    # Resolve skill parameter
-    skill_flag, skill_value = resolve_skill_parameter(skill_param)
+    # Load skill content from file
+    skill_content = load_skill_content(skill_param)
 
     # Serialize message to JSON
     message_json = json.dumps(message)
 
-    # Construct command
-    cmd = ["claude", skill_flag, skill_value, message_json]
+    # Construct command using -p (print mode) and --system-prompt
+    cmd = ["claude", "-p", "--system-prompt", skill_content, message_json]
 
     # Determine working directory
     work_dir = cwd if cwd else None
