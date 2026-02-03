@@ -2,6 +2,11 @@
 Core listen operations using Slack Web API.
 """
 
+import json
+import os
+import shutil
+import subprocess
+import sys
 import time
 from collections.abc import Iterator
 from datetime import datetime, timezone
@@ -151,3 +156,85 @@ def listen_channel(
             # Exit after first message unless continuous mode
             if not continuous:
                 return
+
+
+def resolve_skill_parameter(skill_param: str) -> tuple[str, str]:
+    """
+    Determine if skill_param is a file path or skill name.
+
+    Args:
+        skill_param: Skill name or path to SKILL.md file
+
+    Returns:
+        (command_flag, value) tuple:
+        - ("--skill-file", abs_path) if it's a file
+        - ("--skill", skill_name) otherwise
+    """
+    if os.path.exists(skill_param):
+        return ("--skill-file", os.path.abspath(skill_param))
+    else:
+        return ("--skill", skill_param)
+
+
+def spawn_claude_with_skill(
+    message: dict,
+    skill_param: str,
+    cwd: str | None = None,
+    timeout: float | None = None,
+) -> int:
+    """
+    Spawn Claude Code instance with skill for processing message.
+
+    Args:
+        message: Full message dict (will be serialized to JSON)
+        skill_param: Skill name or path to SKILL.md
+        cwd: Working directory for Claude (default: current directory)
+        timeout: Timeout in seconds (default: None = no timeout)
+
+    Returns:
+        Exit code from Claude process (0 = success)
+
+    Raises:
+        FileNotFoundError: If claude command not found in PATH
+    """
+    # Check if claude command exists
+    claude_path = shutil.which("claude")
+    if not claude_path:
+        raise FileNotFoundError(
+            "claude command not found in PATH. "
+            "Install Claude Code from https://claude.ai/download"
+        )
+
+    # Resolve skill parameter
+    skill_flag, skill_value = resolve_skill_parameter(skill_param)
+
+    # Serialize message to JSON
+    message_json = json.dumps(message)
+
+    # Construct command
+    cmd = ["claude", skill_flag, skill_value, message_json]
+
+    # Determine working directory
+    work_dir = cwd if cwd else None
+
+    try:
+        result = subprocess.run(
+            cmd,
+            cwd=work_dir,
+            stdin=subprocess.DEVNULL,
+            check=False,  # Don't raise on non-zero exit
+            timeout=timeout,
+        )
+        return result.returncode
+    except subprocess.TimeoutExpired:
+        print(
+            f"Claude Code execution timed out after {timeout}s",
+            file=sys.stderr,
+        )
+        return -1
+    except Exception as e:
+        print(
+            f"Error executing Claude Code: {e}",
+            file=sys.stderr,
+        )
+        return -1

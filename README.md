@@ -179,6 +179,68 @@ clacks recent
 clacks recent -l 50
 ```
 
+### Listen
+
+Listen for new messages in a channel (outputs NDJSON, one message per line):
+```bash
+clacks listen "#general"
+```
+
+Listen with history (fetch last N messages first):
+```bash
+clacks listen "#general" --include-history 5
+```
+
+Listen to thread replies:
+```bash
+clacks listen "#general" --thread "1234567890.123456"
+```
+
+Filter by sender (wait for response from specific user):
+```bash
+clacks listen "#general" --from "@username"
+```
+
+Set timeout (exit after N seconds):
+```bash
+clacks listen "#general" --timeout 300
+```
+
+Options:
+- `--interval SECONDS` - Poll interval (default: 2.0)
+- `--include-bots` - Include bot messages (excluded by default)
+- `--continuous` - Keep listening after receiving messages (default: exit after first)
+- `-o FILE` - Write to file instead of stdout
+
+#### Automated Processing with Claude Code
+
+Execute Claude Code for each message received using a skill:
+
+```bash
+# Process messages with a specific skill file
+clacks listen "#general" --claude-exec-skill /path/to/skill/SKILL.md
+
+# Use a named skill that Claude Code knows about
+clacks listen "#support" --claude-exec-skill customer-support --continuous
+
+# Set working directory for Claude Code
+clacks listen "#builds" --claude-exec-skill ci-helper --claude-cwd /path/to/project
+
+# Add timeout to prevent long-running executions
+clacks listen "#alerts" --claude-exec-skill alert-handler --claude-timeout 300 --continuous
+```
+
+The full message JSON is passed to Claude Code. Each message spawns a fresh Claude instance that terminates after completion.
+
+Example workflow - automated support channel:
+```bash
+# Listen for customer questions and process with support skill
+clacks listen "#customer-support" \
+    --claude-exec-skill support-agent \
+    --continuous \
+    --claude-timeout 600
+```
+
 ## Rolodex
 
 Manage aliases for users and channels. Aliases resolve to platform-specific IDs (e.g., Slack user IDs).

@@ -12,7 +12,7 @@ from slack_clacks.configuration.database import (
     get_current_context,
     get_session,
 )
-from slack_clacks.listen.operations import listen_channel
+from slack_clacks.listen.operations import listen_channel, spawn_claude_with_skill
 from slack_clacks.messaging.operations import (
     resolve_channel_id,
     resolve_user_id,
@@ -60,6 +60,36 @@ def handle_listen(args: argparse.Namespace) -> None:
                 if not args.include_bots:
                     if msg.get("bot_id") or msg.get("subtype") == "bot_message":
                         continue
+
+                # Execute Claude Code if skill specified
+                if args.claude_exec_skill:
+                    msg_ts = msg.get("ts", "unknown")
+                    print(
+                        f"Spawning Claude Code for message {msg_ts}...",
+                        file=sys.stderr,
+                    )
+                    try:
+                        exit_code = spawn_claude_with_skill(
+                            message=msg,
+                            skill_param=args.claude_exec_skill,
+                            cwd=args.claude_cwd,
+                            timeout=args.claude_timeout,
+                        )
+                        print(
+                            f"Claude Code exited with code {exit_code} "
+                            f"for message {msg_ts}",
+                            file=sys.stderr,
+                        )
+                    except FileNotFoundError as e:
+                        print(f"Error: {e}", file=sys.stderr)
+                        # Only print this error once, then exit
+                        return
+                    except Exception as e:
+                        print(
+                            f"Unexpected error processing message {msg_ts}: {e}",
+                            file=sys.stderr,
+                        )
+                        # Continue listening despite error
 
                 messages_received += 1
                 line = json.dumps(msg)
@@ -137,6 +167,24 @@ def generate_listen_parser() -> argparse.ArgumentParser:
         type=argparse.FileType("a"),
         default=sys.stdout,
         help="Output file for NDJSON results (default: stdout)",
+    )
+    parser.add_argument(
+        "--claude-exec-skill",
+        type=str,
+        help=(
+            "Execute Claude Code with this skill for each message "
+            "(skill name or path to SKILL.md)"
+        ),
+    )
+    parser.add_argument(
+        "--claude-cwd",
+        type=str,
+        help="Working directory for Claude Code execution (default: current directory)",
+    )
+    parser.add_argument(
+        "--claude-timeout",
+        type=float,
+        help="Timeout in seconds for Claude Code execution (default: no timeout)",
     )
     parser.set_defaults(func=handle_listen)
 
