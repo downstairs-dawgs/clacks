@@ -240,12 +240,12 @@ def spawn_claude_with_skill(
     message_json = json.dumps(message)
 
     # Construct command using -p (print mode) and --system-prompt
-    # Use --permission-mode acceptEdits to auto-approve Bash commands
+    # Allow clacks commands specifically without requiring approval
     cmd = [
         "claude",
         "-p",
-        "--permission-mode",
-        "acceptEdits",
+        "--allowedTools",
+        "Bash(clacks:*)",
         "--system-prompt",
         skill_content,
         message_json,
