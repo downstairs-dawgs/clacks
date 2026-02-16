@@ -165,12 +165,25 @@ def send_message(
     channel: str,
     text: str,
     thread_ts: str | None = None,
+    incognito: bool = False,
 ):
     """
     Send a message to a channel or DM.
     Returns the Slack API response.
     """
-    return client.chat_postMessage(channel=channel, text=text, thread_ts=thread_ts)
+    if incognito:
+        return client.chat_postMessage(channel=channel, text=text, thread_ts=thread_ts)
+
+    blocks: list[dict[str, object]] = [
+        {"type": "section", "text": {"type": "mrkdwn", "text": text}},
+        {
+            "type": "context",
+            "elements": [{"type": "mrkdwn", "text": "Sent via clacks"}],
+        },
+    ]
+    return client.chat_postMessage(
+        channel=channel, text=text, blocks=blocks, thread_ts=thread_ts
+    )
 
 
 def read_messages(

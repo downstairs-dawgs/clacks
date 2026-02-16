@@ -47,7 +47,13 @@ def handle_send(args: argparse.Namespace) -> None:
         else:
             raise ValueError("Must specify either --channel or --user.")
 
-        response = send_message(client, channel_id, args.message, thread_ts=args.thread)
+        response = send_message(
+            client,
+            channel_id,
+            args.message,
+            thread_ts=args.thread,
+            incognito=args.incognito,
+        )
 
         with args.outfile as ofp:
             json.dump(response.data, ofp)
@@ -89,6 +95,11 @@ def generate_send_parser() -> argparse.ArgumentParser:
         "--thread",
         type=str,
         help="Thread timestamp for replying to thread",
+    )
+    parser.add_argument(
+        "--incognito",
+        action="store_true",
+        help="Send without the clacks footer",
     )
     parser.add_argument(
         "-o",
