@@ -150,6 +150,36 @@ uvx --from slack-clacks clacks send -c "#general" -m "Question for @alice"
 uvx --from slack-clacks clacks listen "#general" --from "@alice" --timeout 300
 ```
 
+### Automated Message Processing
+
+Spawn Claude Code to process each message with a skill:
+
+```bash
+# Process messages in a channel
+uvx --from slack-clacks clacks listen "#general" --claude-exec-skill my-skill
+
+# Use continuous mode for ongoing processing
+uvx --from slack-clacks clacks listen "#support" \\
+    --claude-exec-skill support --continuous
+
+# Set working directory and timeout
+uvx --from slack-clacks clacks listen "#builds" \\
+    --claude-exec-skill ci-assistant \\
+    --claude-cwd /path/to/project \\
+    --claude-timeout 300
+```
+
+The full message JSON is passed as input to Claude Code. Example message structure:
+```json
+{
+  "text": "Can you help me with...",
+  "user": "U123456",
+  "ts": "1234567890.123456",
+  "channel": "C123456",
+  "received_at": "2024-01-01T12:00:00Z"
+}
+```
+
 ## Context Management
 
 List available contexts:

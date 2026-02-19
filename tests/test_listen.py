@@ -1,7 +1,8 @@
+import os
 import time
 import unittest
 from datetime import datetime
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from slack_clacks.listen.operations import listen_channel
 
@@ -279,6 +280,7 @@ class TestRateLimitHandling(unittest.TestCase):
     def test_retries_on_rate_limit(self):
         """Should retry with backoff when rate limited."""
         from slack_sdk.errors import SlackApiError
+
         from slack_clacks.listen.operations import _call_with_backoff
 
         mock_response = MagicMock()
@@ -301,6 +303,7 @@ class TestRateLimitHandling(unittest.TestCase):
     def test_raises_after_max_retries(self):
         """Should raise after max retries exhausted."""
         from slack_sdk.errors import SlackApiError
+
         from slack_clacks.listen.operations import _call_with_backoff
 
         mock_response = MagicMock()
@@ -312,6 +315,212 @@ class TestRateLimitHandling(unittest.TestCase):
 
         with self.assertRaises(SlackApiError):
             _call_with_backoff(mock_func, max_retries=2, base_delay=0.01)
+
+
+class TestLoadSkillContent(unittest.TestCase):
+    def test_load_skill_content_from_file_path(self):
+        """Should load content from an existing file path."""
+        import tempfile
+
+        from slack_clacks.listen.operations import load_skill_content
+
+        with tempfile.NamedTemporaryFile(suffix=".md", delete=False, mode="w") as f:
+            f.write("# Test Skill\nDo the thing.")
+            f.flush()
+            try:
+                content = load_skill_content(f.name)
+                self.assertEqual(content, "# Test Skill\nDo the thing.")
+            finally:
+                os.unlink(f.name)
+
+    def test_load_skill_content_nonexistent_raises(self):
+        """Should raise FileNotFoundError for a nonexistent skill name."""
+        from slack_clacks.listen.operations import load_skill_content
+
+        with self.assertRaises(FileNotFoundError) as ctx:
+            load_skill_content("nonexistent-skill-abc123")
+
+        self.assertIn("Skill not found", str(ctx.exception))
+
+    def test_load_skill_content_home_dir(self):
+        """Should find skill in ~/.claude/skills/<name>/SKILL.md."""
+        from slack_clacks.listen.operations import load_skill_content
+
+        home = os.path.expanduser("~")
+        skill_dir = os.path.join(home, ".claude", "skills", "_test_clacks_skill")
+        os.makedirs(skill_dir, exist_ok=True)
+        skill_path = os.path.join(skill_dir, "SKILL.md")
+        try:
+            with open(skill_path, "w") as f:
+                f.write("home skill content")
+            content = load_skill_content("_test_clacks_skill")
+            self.assertEqual(content, "home skill content")
+        finally:
+            os.unlink(skill_path)
+            os.rmdir(skill_dir)
+
+
+class TestSpawnClaudeWithSkill(unittest.TestCase):
+    @patch("slack_clacks.listen.operations.subprocess.run")
+    @patch("slack_clacks.listen.operations.shutil.which")
+    def test_spawn_claude_with_skill_file(self, mock_which, mock_run):
+        """Should construct correct command with -p and --system-prompt."""
+        import tempfile
+
+        from slack_clacks.listen.operations import spawn_claude_with_skill
+
+        mock_which.return_value = "/usr/bin/claude"
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_run.return_value = mock_result
+
+        with tempfile.NamedTemporaryFile(suffix=".md", delete=False, mode="w") as f:
+            f.write("# My Skill\nProcess messages.")
+            f.flush()
+            try:
+                msg = {"text": "hello", "ts": "123.456"}
+                exit_code = spawn_claude_with_skill(msg, f.name)
+
+                self.assertEqual(exit_code, 0)
+                mock_run.assert_called_once()
+                args = mock_run.call_args[0][0]
+                self.assertEqual(args[0], "claude")
+                self.assertEqual(args[1], "-p")
+                self.assertEqual(args[2], "--allowedTools")
+                self.assertEqual(args[3], "Bash(clacks:*)")
+                self.assertEqual(args[4], "--system-prompt")
+                self.assertEqual(args[5], "# My Skill\nProcess messages.")
+                self.assertIn('"text": "hello"', args[6])
+            finally:
+                os.unlink(f.name)
+
+    @patch("slack_clacks.listen.operations.subprocess.run")
+    @patch("slack_clacks.listen.operations.shutil.which")
+    @patch("slack_clacks.listen.operations.load_skill_content")
+    def test_spawn_claude_with_skill_name(self, mock_load, mock_which, mock_run):
+        """Should construct correct command for named skill."""
+        from slack_clacks.listen.operations import spawn_claude_with_skill
+
+        mock_which.return_value = "/usr/bin/claude"
+        mock_load.return_value = "skill content from name"
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_run.return_value = mock_result
+
+        msg = {"text": "hello", "ts": "123.456"}
+        exit_code = spawn_claude_with_skill(msg, "my-skill")
+
+        self.assertEqual(exit_code, 0)
+        mock_load.assert_called_once_with("my-skill", cwd=None)
+        args = mock_run.call_args[0][0]
+        self.assertEqual(args[1], "-p")
+        self.assertEqual(args[4], "--system-prompt")
+        self.assertEqual(args[5], "skill content from name")
+
+    @patch("slack_clacks.listen.operations.shutil.which")
+    def test_spawn_claude_command_not_found(self, mock_which):
+        """Should raise FileNotFoundError if claude not in PATH."""
+        from slack_clacks.listen.operations import spawn_claude_with_skill
+
+        mock_which.return_value = None
+
+        msg = {"text": "hello"}
+        with self.assertRaises(FileNotFoundError) as ctx:
+            spawn_claude_with_skill(msg, "clacks")
+
+        self.assertIn("claude command not found", str(ctx.exception))
+
+    @patch("slack_clacks.listen.operations.subprocess.run")
+    @patch("slack_clacks.listen.operations.shutil.which")
+    @patch("slack_clacks.listen.operations.load_skill_content")
+    def test_spawn_claude_timeout(self, mock_load, mock_which, mock_run):
+        """Should handle timeout gracefully."""
+        import subprocess
+
+        from slack_clacks.listen.operations import spawn_claude_with_skill
+
+        mock_which.return_value = "/usr/bin/claude"
+        mock_load.return_value = "skill content"
+        mock_run.side_effect = subprocess.TimeoutExpired("claude", 5)
+
+        msg = {"text": "hello"}
+        exit_code = spawn_claude_with_skill(msg, "my-skill", timeout=5.0)
+
+        self.assertEqual(exit_code, -1)
+
+    @patch("slack_clacks.listen.operations.subprocess.run")
+    @patch("slack_clacks.listen.operations.shutil.which")
+    @patch("slack_clacks.listen.operations.load_skill_content")
+    def test_spawn_claude_with_cwd(self, mock_load, mock_which, mock_run):
+        """Should use specified working directory."""
+        from slack_clacks.listen.operations import spawn_claude_with_skill
+
+        mock_which.return_value = "/usr/bin/claude"
+        mock_load.return_value = "skill content"
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_run.return_value = mock_result
+
+        msg = {"text": "hello"}
+        spawn_claude_with_skill(msg, "my-skill", cwd="/tmp")
+
+        self.assertEqual(mock_run.call_args.kwargs["cwd"], "/tmp")
+
+    @patch("slack_clacks.listen.operations.subprocess.run")
+    @patch("slack_clacks.listen.operations.shutil.which")
+    @patch("slack_clacks.listen.operations.load_skill_content")
+    def test_spawn_claude_json_serialization(self, mock_load, mock_which, mock_run):
+        """Should serialize complex message objects correctly."""
+        from slack_clacks.listen.operations import spawn_claude_with_skill
+
+        mock_which.return_value = "/usr/bin/claude"
+        mock_load.return_value = "skill content"
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_run.return_value = mock_result
+
+        msg = {
+            "text": "hello world",
+            "ts": "1234567890.123456",
+            "user": "U123456",
+            "channel": "C123456",
+            "received_at": "2024-01-01T12:00:00Z",
+        }
+        spawn_claude_with_skill(msg, "my-skill")
+
+        # Message JSON is the last argument (index 6)
+        args = mock_run.call_args[0][0]
+        message_json = args[6]
+        import json
+
+        parsed = json.loads(message_json)
+        self.assertEqual(parsed["text"], "hello world")
+        self.assertEqual(parsed["user"], "U123456")
+
+    @patch("slack_clacks.listen.operations.subprocess.run")
+    @patch("slack_clacks.listen.operations.shutil.which")
+    @patch("slack_clacks.listen.operations.load_skill_content")
+    def test_spawn_claude_subprocess_params(self, mock_load, mock_which, mock_run):
+        """Should call subprocess with correct parameters."""
+        import subprocess
+
+        from slack_clacks.listen.operations import spawn_claude_with_skill
+
+        mock_which.return_value = "/usr/bin/claude"
+        mock_load.return_value = "skill content"
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_run.return_value = mock_result
+
+        msg = {"text": "hello"}
+        spawn_claude_with_skill(msg, "my-skill", timeout=30.0)
+
+        # Verify subprocess.run was called with correct parameters
+        self.assertEqual(mock_run.call_args.kwargs["stdin"], subprocess.DEVNULL)
+        self.assertEqual(mock_run.call_args.kwargs["check"], False)
+        self.assertEqual(mock_run.call_args.kwargs["timeout"], 30.0)
+        self.assertEqual(mock_run.call_args.kwargs["stdout"], subprocess.PIPE)
+        self.assertEqual(mock_run.call_args.kwargs["stderr"], subprocess.PIPE)
 
 
 if __name__ == "__main__":
