@@ -61,7 +61,10 @@ def handle_listen(args: argparse.Namespace) -> None:
                     if msg.get("bot_id") or msg.get("subtype") == "bot_message":
                         continue
 
-                # Execute Claude Code if skill specified
+                # Execute Claude Code if skill specified.
+                # NOTE: Processing is synchronous -- each message blocks until
+                # the Claude subprocess completes. In --continuous mode with
+                # slow skill execution, messages will queue up sequentially.
                 if args.claude_exec_skill:
                     msg_ts = msg.get("ts", "unknown")
                     print(

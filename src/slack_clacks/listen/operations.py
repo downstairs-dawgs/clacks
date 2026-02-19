@@ -160,12 +160,13 @@ def listen_channel(
                 return
 
 
-def load_skill_content(skill_param: str) -> str:
+def load_skill_content(skill_param: str, cwd: str | None = None) -> str:
     """
     Load skill content from file path or skill name.
 
     Args:
         skill_param: Path to SKILL.md file OR skill name (e.g., "slack-summarizer")
+        cwd: Base directory for project-local skill lookup (default: current directory)
 
     Returns:
         Content of the skill file
@@ -189,8 +190,9 @@ def load_skill_content(skill_param: str) -> str:
         with open(skill_path, "r") as f:
             return f.read()
 
-    # Try in .claude/skills/ (project local)
-    local_skill_path = os.path.join(".claude", "skills", skill_param, "SKILL.md")
+    # Try in .claude/skills/ (project local, relative to cwd if provided)
+    base = cwd if cwd else os.getcwd()
+    local_skill_path = os.path.join(base, ".claude", "skills", skill_param, "SKILL.md")
 
     if os.path.exists(local_skill_path):
         with open(local_skill_path, "r") as f:
@@ -235,14 +237,19 @@ def spawn_claude_with_skill(
             "Install Claude Code from https://claude.ai/download"
         )
 
-    # Load skill content from file
-    skill_content = load_skill_content(skill_param)
+    # Load skill content from file (pass cwd for project-local skill lookup)
+    skill_content = load_skill_content(skill_param, cwd=cwd)
 
     # Serialize message to JSON
     message_json = json.dumps(message)
 
-    # Construct command using -p (print mode) and --system-prompt
-    # Allow clacks commands specifically without requiring approval
+    # Construct command using -p (print mode) and --system-prompt.
+    # --allowedTools "Bash(clacks:*)" restricts Claude to only running
+    # commands that start with "clacks" (e.g., "clacks send", "clacks listen").
+    # Claude Code validates the tool pattern against the command prefix,
+    # so shell metacharacters like "&&", ";", or "|" after the clacks command
+    # are NOT prevented by the pattern alone -- the skill prompt should
+    # instruct Claude on what commands to run.
     cmd = [
         "claude",
         "-p",
@@ -261,9 +268,16 @@ def spawn_claude_with_skill(
             cmd,
             cwd=work_dir,
             stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             check=False,  # Don't raise on non-zero exit
             timeout=timeout,
         )
+        # Log Claude's output to stderr so it doesn't mix with NDJSON on stdout
+        if result.stdout and isinstance(result.stdout, bytes):
+            sys.stderr.buffer.write(result.stdout)
+        if result.stderr and isinstance(result.stderr, bytes):
+            sys.stderr.buffer.write(result.stderr)
         return result.returncode
     except subprocess.TimeoutExpired:
         print(
