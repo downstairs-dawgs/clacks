@@ -13,6 +13,7 @@ from slack_clacks.messaging.cli import (
 )
 from slack_clacks.rolodex.cli import generate_cli as generate_rolodex_cli
 from slack_clacks.skill.cli import generate_cli as generate_skill_cli
+from slack_clacks.upload.cli import generate_upload_parser
 
 
 def generate_cli() -> argparse.ArgumentParser:
@@ -102,6 +103,14 @@ def generate_cli() -> argparse.ArgumentParser:
         parents=[listen_parser],
         add_help=False,
         help=listen_parser.description,
+    )
+
+    upload_parser = generate_upload_parser()
+    subparsers.add_parser(
+        "upload",
+        parents=[upload_parser],
+        add_help=False,
+        help=upload_parser.description,
     )
 
     return parser

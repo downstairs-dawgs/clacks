@@ -88,6 +88,23 @@ Delete a message (your own messages only):
 uvx --from slack-clacks clacks delete -c "#general" -m "1234567890.123456"
 ```
 
+## Uploading Files and Snippets
+
+Upload a file to a channel:
+```bash
+uvx --from slack-clacks clacks upload -c "#general" -f /path/to/file.py
+```
+
+Pipe command output as a snippet:
+```bash
+cat script.py | uvx --from slack-clacks clacks upload -c "#ops" -t python
+```
+
+Private upload (returns permalink, not shared to any channel):
+```bash
+echo "print('hello')" | uvx --from slack-clacks clacks upload -t python
+```
+
 ## Rolodex (Aliases)
 
 Sync users and channels from Slack:
