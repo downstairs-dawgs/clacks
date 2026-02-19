@@ -5,10 +5,13 @@ Core listen operations using Slack Web API.
 import time
 from collections.abc import Iterator
 from datetime import datetime, timezone
+from decimal import Decimal
 from typing import Any
 
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
+
+from slack_clacks.constants import SLACK_TS_EPSILON
 
 
 def _call_with_backoff(
@@ -111,7 +114,7 @@ def listen_channel(
         time.sleep(interval)
 
         # Add epsilon to make oldest exclusive (Slack's oldest is inclusive)
-        exclusive_oldest = str(float(latest_ts) + 0.000001)
+        exclusive_oldest = str(Decimal(latest_ts) + SLACK_TS_EPSILON)
 
         if thread_ts:
             response = _call_with_backoff(
