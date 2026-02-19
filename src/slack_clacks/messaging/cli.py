@@ -14,6 +14,7 @@ from slack_clacks.messaging.operations import (
     delete_message,
     get_recent_activity,
     open_dm_channel,
+    parse_timestamp,
     read_messages,
     read_thread,
     remove_reaction,
@@ -132,14 +133,24 @@ def handle_read(args: argparse.Namespace) -> None:
         else:
             raise ValueError("Must specify either --channel or --user.")
 
+        oldest = parse_timestamp(args.since) if args.since else None
+        latest = parse_timestamp(args.until) if args.until else None
+
         if args.thread:
-            response = read_thread(client, channel_id, args.thread, limit=args.limit)
+            response = read_thread(
+                client,
+                channel_id,
+                args.thread,
+                limit=args.limit,
+                oldest=oldest,
+                latest=latest,
+            )
         elif args.message:
             ts = resolve_message_timestamp(args.message)
             response = read_messages(client, channel_id, limit=1, latest=ts, oldest=ts)
         else:
             response = read_messages(
-                client, channel_id, limit=args.limit, latest=None, oldest=None
+                client, channel_id, limit=args.limit, latest=latest, oldest=oldest
             )
 
         with args.outfile as ofp:
@@ -181,6 +192,24 @@ def generate_read_parser() -> argparse.ArgumentParser:
         "--message",
         type=str,
         help="Specific message timestamp to read",
+    )
+    parser.add_argument(
+        "--since",
+        type=str,
+        help=(
+            "Only messages after this time "
+            "(Slack link, timestamp, ISO 8601, "
+            "or relative like '5 minutes ago')"
+        ),
+    )
+    parser.add_argument(
+        "--until",
+        type=str,
+        help=(
+            "Only messages before this time "
+            "(Slack link, timestamp, ISO 8601, "
+            "or relative like '1 hour ago')"
+        ),
     )
     parser.add_argument(
         "-l",
