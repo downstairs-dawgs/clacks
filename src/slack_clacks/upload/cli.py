@@ -119,14 +119,13 @@ def handle_upload(args: argparse.Namespace) -> None:
             if isinstance(file_data, dict):
                 permalink = file_data.get("permalink", "")
 
-        if args.outfile is not sys.stdout:
-            with args.outfile as ofp:
-                json.dump(response, ofp)
+        with args.outfile as ofp:
+            json.dump(response, ofp)
 
         if channel_id:
-            print(f"Shared: {permalink}")
+            print(f"Shared: {permalink}", file=sys.stderr)
         else:
-            print(permalink)
+            print(permalink, file=sys.stderr)
 
         if permalink:
             _copy_to_clipboard(permalink)
