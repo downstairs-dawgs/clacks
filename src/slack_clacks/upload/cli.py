@@ -24,21 +24,25 @@ from slack_clacks.upload.operations import (
     upload_file,
 )
 
+_CLIPBOARD_COMMANDS = ["pbcopy", "xclip", "xsel"]
+
 
 def _copy_to_clipboard(text: str) -> None:
-    """Copy text to clipboard via pbcopy if available."""
-    if shutil.which("pbcopy"):
-        subprocess.run(
-            ["pbcopy"],
-            input=text.encode(),
-            check=True,
-        )
-        print("(copied to clipboard)", file=sys.stderr)
-    else:
-        print(
-            "(not copied to clipboard — install pbcopy)",
-            file=sys.stderr,
-        )
+    """Copy text to clipboard if a supported tool is available."""
+    for cmd in _CLIPBOARD_COMMANDS:
+        if shutil.which(cmd):
+            args = [cmd]
+            if cmd == "xclip":
+                args += ["-selection", "clipboard"]
+            elif cmd == "xsel":
+                args += ["--clipboard", "--input"]
+            subprocess.run(args, input=text.encode(), check=True)
+            print("(copied to clipboard)", file=sys.stderr)
+            return
+    print(
+        "(not copied to clipboard — no clipboard tool found)",
+        file=sys.stderr,
+    )
 
 
 def handle_upload(args: argparse.Namespace) -> None:
@@ -75,7 +79,7 @@ def handle_upload(args: argparse.Namespace) -> None:
 
         filetype = args.filetype or infer_filetype(filename)
 
-        thread_ts = args.thread if hasattr(args, "thread") and args.thread else None
+        thread_ts = args.thread
 
         if args.file:
             response = upload_file(
@@ -104,8 +108,16 @@ def handle_upload(args: argparse.Namespace) -> None:
             )
 
         # Extract permalink from response
-        file_data = response.get("file", {}) if isinstance(response, dict) else {}
-        permalink = file_data.get("permalink", "")
+        # files_upload_v2 returns "file" (single) or "files" (list)
+        permalink = ""
+        if isinstance(response, dict):
+            file_data = response.get("file")
+            if not file_data:
+                files = response.get("files", [])
+                if files:
+                    file_data = files[0]
+            if isinstance(file_data, dict):
+                permalink = file_data.get("permalink", "")
 
         if args.outfile is not sys.stdout:
             with args.outfile as ofp:

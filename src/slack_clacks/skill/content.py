@@ -88,6 +88,38 @@ Delete a message (your own messages only):
 uvx --from slack-clacks clacks delete -c "#general" -m "1234567890.123456"
 ```
 
+## Uploading Files and Snippets
+
+Upload a file to a channel:
+```bash
+uvx --from slack-clacks clacks upload -c "#general" -f /path/to/file.py
+```
+
+Pipe command output as a snippet:
+```bash
+cat script.py | uvx --from slack-clacks clacks upload -c "#ops" -t python
+kubectl logs pod | uvx --from slack-clacks clacks upload -c "#ops" -n pod-logs.txt
+```
+
+Upload to a DM:
+```bash
+uvx --from slack-clacks clacks upload -u "@username" -f report.csv
+```
+
+Private upload (returns permalink, not shared to any channel):
+```bash
+echo "print('hello')" | uvx --from slack-clacks clacks upload -t python
+```
+
+Options:
+- `-f FILE` - File path to upload (if omitted, reads stdin)
+- `-n NAME` - Display filename in Slack
+- `-t TYPE` - Syntax highlighting: python, go, javascript, shell, etc.
+- `--title TITLE` - Snippet title
+- `-m COMMENT` - Initial comment posted with the snippet
+- `--thread TS` - Reply in a thread
+- `-o FILE` - Write full JSON response to file
+
 ## Rolodex (Aliases)
 
 Sync users and channels from Slack:
@@ -169,6 +201,7 @@ uvx --from slack-clacks clacks config info
 
 ## Output
 
-All commands output JSON to stdout.
+Most commands output JSON to stdout.
 The `listen` command outputs NDJSON (one JSON object per line).
+The `upload` command prints the permalink to stdout and copies it to the clipboard.
 """
