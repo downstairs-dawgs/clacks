@@ -279,6 +279,7 @@ class TestRateLimitHandling(unittest.TestCase):
     def test_retries_on_rate_limit(self):
         """Should retry with backoff when rate limited."""
         from slack_sdk.errors import SlackApiError
+
         from slack_clacks.listen.operations import _call_with_backoff
 
         mock_response = MagicMock()
@@ -301,6 +302,7 @@ class TestRateLimitHandling(unittest.TestCase):
     def test_raises_after_max_retries(self):
         """Should raise after max retries exhausted."""
         from slack_sdk.errors import SlackApiError
+
         from slack_clacks.listen.operations import _call_with_backoff
 
         mock_response = MagicMock()

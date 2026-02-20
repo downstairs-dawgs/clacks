@@ -1,6 +1,7 @@
 import argparse
 import json
 import sys
+from decimal import Decimal
 
 from slack_clacks.auth.client import create_client
 from slack_clacks.auth.validation import get_scopes_for_mode, validate
@@ -9,11 +10,13 @@ from slack_clacks.configuration.database import (
     get_current_context,
     get_session,
 )
+from slack_clacks.constants import SLACK_TS_EPSILON
 from slack_clacks.messaging.operations import (
     add_reaction,
     delete_message,
     get_recent_activity,
     open_dm_channel,
+    parse_timestamp,
     read_messages,
     read_thread,
     remove_reaction,
@@ -132,14 +135,33 @@ def handle_read(args: argparse.Namespace) -> None:
         else:
             raise ValueError("Must specify either --channel or --user.")
 
+        oldest = None
+        if args.since:
+            oldest = parse_timestamp(args.since)
+        elif args.after:
+            oldest = str(Decimal(parse_timestamp(args.after)) + SLACK_TS_EPSILON)
+
+        latest = None
+        if args.until:
+            latest = parse_timestamp(args.until)
+        elif args.before:
+            latest = str(Decimal(parse_timestamp(args.before)) - SLACK_TS_EPSILON)
+
         if args.thread:
-            response = read_thread(client, channel_id, args.thread, limit=args.limit)
+            response = read_thread(
+                client,
+                channel_id,
+                args.thread,
+                limit=args.limit,
+                oldest=oldest,
+                latest=latest,
+            )
         elif args.message:
             ts = resolve_message_timestamp(args.message)
             response = read_messages(client, channel_id, limit=1, latest=ts, oldest=ts)
         else:
             response = read_messages(
-                client, channel_id, limit=args.limit, latest=None, oldest=None
+                client, channel_id, limit=args.limit, latest=latest, oldest=oldest
             )
 
         with args.outfile as ofp:
@@ -181,6 +203,45 @@ def generate_read_parser() -> argparse.ArgumentParser:
         "--message",
         type=str,
         help="Specific message timestamp to read",
+    )
+    lower_bound = parser.add_mutually_exclusive_group()
+    lower_bound.add_argument(
+        "--since",
+        type=str,
+        help=(
+            "Only messages at or after this time (inclusive) "
+            "(Slack link, timestamp, ISO 8601, "
+            "or relative like '5 minutes ago')"
+        ),
+    )
+    lower_bound.add_argument(
+        "--after",
+        type=str,
+        help=(
+            "Only messages after this time (exclusive) "
+            "(Slack link, timestamp, ISO 8601, "
+            "or relative like '5 minutes ago')"
+        ),
+    )
+
+    upper_bound = parser.add_mutually_exclusive_group()
+    upper_bound.add_argument(
+        "--until",
+        type=str,
+        help=(
+            "Only messages at or before this time (inclusive) "
+            "(Slack link, timestamp, ISO 8601, "
+            "or relative like '1 hour ago')"
+        ),
+    )
+    upper_bound.add_argument(
+        "--before",
+        type=str,
+        help=(
+            "Only messages before this time (exclusive) "
+            "(Slack link, timestamp, ISO 8601, "
+            "or relative like '1 hour ago')"
+        ),
     )
     parser.add_argument(
         "-l",

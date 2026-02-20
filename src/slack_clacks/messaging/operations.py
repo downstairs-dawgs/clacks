@@ -2,6 +2,10 @@
 Core messaging operations using Slack Web API.
 """
 
+import re
+import time
+from datetime import datetime, timezone
+
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from sqlalchemy.orm import Session
@@ -122,8 +126,6 @@ def resolve_message_timestamp(timestamp_or_link: str) -> str:
     # Check if it's a Slack message link
     if timestamp_or_link.startswith("http"):
         # Link format: https://workspace.slack.com/archives/C08740LGAE6/p1767795445338939
-        import re
-
         match = re.search(r"/p(\d+)(?:\?|#|$)", timestamp_or_link)
         if not match:
             raise ValueError(f"Invalid Slack message link: {timestamp_or_link}")
@@ -146,6 +148,68 @@ def resolve_message_timestamp(timestamp_or_link: str) -> str:
             f"Invalid message identifier: {timestamp_or_link}. "
             "Expected timestamp (e.g., 1767795445.338939) or Slack message link."
         )
+
+
+def parse_timestamp(value: str) -> str:
+    """
+    Parse a flexible timestamp value into a Slack-compatible Unix timestamp string.
+
+    Accepts:
+    - Slack message links (https://workspace.slack.com/archives/C.../p...)
+    - Raw Slack timestamps (1770088169.782279 or 1770088169)
+    - ISO 8601 datetimes (2024-01-15T10:00:00, with or without timezone)
+    - Relative times (5 minutes ago, 1 hour ago, 3 days ago)
+
+    Returns a Unix timestamp string suitable for Slack API oldest/latest params.
+    Raises ValueError on unrecognized formats.
+    """
+    value = value.strip()
+    if not value:
+        raise ValueError("Empty timestamp value")
+
+    # Slack message links
+    if value.startswith("http"):
+        return resolve_message_timestamp(value)
+
+    # Raw numeric timestamp (with or without decimal)
+    try:
+        float(value)
+        return value
+    except ValueError:
+        pass
+
+    # Relative time: "N unit(s) ago"
+    relative_match = re.match(
+        r"^(\d+)\s+(second|minute|hour|day|week)s?\s+ago$", value, re.IGNORECASE
+    )
+    if relative_match:
+        amount = int(relative_match.group(1))
+        unit = relative_match.group(2).lower()
+        multipliers = {
+            "second": 1,
+            "minute": 60,
+            "hour": 3600,
+            "day": 86400,
+            "week": 604800,
+        }
+        offset = amount * multipliers[unit]
+        return str(time.time() - offset)
+
+    # ISO 8601 datetime
+    try:
+        # Try with timezone info first
+        dt = datetime.fromisoformat(value)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return str(dt.timestamp())
+    except ValueError:
+        pass
+
+    raise ValueError(
+        f"Unrecognized timestamp format: {value}. "
+        "Expected a Slack link, numeric timestamp, ISO 8601 datetime, "
+        'or relative time (e.g., "5 minutes ago").'
+    )
 
 
 def open_dm_channel(client: WebClient, user_id: str) -> str | None:
@@ -189,12 +253,26 @@ def read_messages(
     )
 
 
-def read_thread(client: WebClient, channel: str, thread_ts: str, limit: int = 100):
+def read_thread(
+    client: WebClient,
+    channel: str,
+    thread_ts: str,
+    limit: int = 100,
+    oldest: str | None = None,
+    latest: str | None = None,
+):
     """
     Read messages from a thread.
     Returns the Slack API response with thread replies.
     """
-    return client.conversations_replies(channel=channel, ts=thread_ts, limit=limit)
+    return client.conversations_replies(
+        channel=channel,
+        ts=thread_ts,
+        limit=limit,
+        oldest=oldest,
+        latest=latest,
+        inclusive=True,
+    )
 
 
 def get_recent_activity(
