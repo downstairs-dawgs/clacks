@@ -23,6 +23,7 @@ from slack_clacks.files.operations import (
     list_files,
 )
 from slack_clacks.messaging.operations import resolve_channel_id, resolve_user_id
+from slack_clacks.upload.cli import generate_upload_parser
 
 
 def handle_download(args: argparse.Namespace) -> None:
@@ -128,7 +129,9 @@ def handle_info(args: argparse.Namespace) -> None:
 
 
 def generate_files_cli() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Download, list, and inspect files")
+    parser = argparse.ArgumentParser(
+        description="Upload, download, list, and inspect files"
+    )
     parser.set_defaults(func=lambda _: parser.print_help())
 
     subparsers = parser.add_subparsers(dest="files_command")
@@ -215,5 +218,14 @@ def generate_files_cli() -> argparse.ArgumentParser:
         help="Slack file ID (e.g., F2147483862)",
     )
     info_parser.set_defaults(func=handle_info)
+
+    # --- upload ---
+    upload_parser = generate_upload_parser()
+    subparsers.add_parser(
+        "upload",
+        parents=[upload_parser],
+        add_help=False,
+        help=upload_parser.description,
+    )
 
     return parser
