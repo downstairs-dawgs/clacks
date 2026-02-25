@@ -151,6 +151,7 @@ class TestHandleList(unittest.TestCase):
                 channel=None,
                 user=None,
                 limit=20,
+                page=1,
             )
 
             captured = io.StringIO()
@@ -165,6 +166,7 @@ class TestHandleList(unittest.TestCase):
                 channel=None,
                 user=None,
                 limit=20,
+                page=1,
             )
 
     @patch("slack_clacks.files.cli.ensure_db_updated")
@@ -204,6 +206,7 @@ class TestHandleList(unittest.TestCase):
                 channel="general",
                 user="@alice",
                 limit=5,
+                page=2,
             )
 
             captured = io.StringIO()
@@ -215,6 +218,7 @@ class TestHandleList(unittest.TestCase):
                 channel="C12345",
                 user="U67890",
                 limit=5,
+                page=2,
             )
 
 

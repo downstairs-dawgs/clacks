@@ -25,9 +25,10 @@ def list_files(
     channel: str | None = None,
     user: str | None = None,
     limit: int = 20,
+    page: int = 1,
 ) -> dict | bytes:
     """List files, optionally filtered by channel and/or user."""
-    kwargs: dict = {"count": limit}
+    kwargs: dict = {"count": limit, "page": page}
     if channel:
         kwargs["channel"] = channel
     if user:

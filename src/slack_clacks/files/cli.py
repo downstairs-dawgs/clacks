@@ -106,7 +106,9 @@ def handle_list(args: argparse.Namespace) -> None:
         if args.user:
             user_id = resolve_user_id(client, args.user, session, context.name)
 
-        result = list_files(client, channel=channel_id, user=user_id, limit=args.limit)
+        result = list_files(
+            client, channel=channel_id, user=user_id, limit=args.limit, page=args.page
+        )
         json.dump(result, sys.stdout)
 
 
@@ -198,6 +200,13 @@ def generate_files_cli() -> argparse.ArgumentParser:
         type=int,
         default=20,
         help="Max files to list (default: 20)",
+    )
+    list_parser.add_argument(
+        "-p",
+        "--page",
+        type=int,
+        default=1,
+        help="Page number (default: 1)",
     )
     list_parser.set_defaults(func=handle_list)
 
