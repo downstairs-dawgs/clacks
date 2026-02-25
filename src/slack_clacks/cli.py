@@ -3,6 +3,7 @@ from importlib.metadata import version
 
 from slack_clacks.auth.cli import generate_cli as generate_auth_cli
 from slack_clacks.configuration.cli import generate_cli as generate_config_cli
+from slack_clacks.files.cli import generate_files_cli
 from slack_clacks.listen.cli import generate_listen_parser
 from slack_clacks.messaging.cli import (
     generate_delete_parser,
@@ -111,6 +112,14 @@ def generate_cli() -> argparse.ArgumentParser:
         parents=[upload_parser],
         add_help=False,
         help=upload_parser.description,
+    )
+
+    files_parser = generate_files_cli()
+    subparsers.add_parser(
+        "files",
+        parents=[files_parser],
+        add_help=False,
+        help=files_parser.description,
     )
 
     return parser
