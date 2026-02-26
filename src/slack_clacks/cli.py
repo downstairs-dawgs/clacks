@@ -6,6 +6,7 @@ from slack_clacks.configuration.cli import generate_cli as generate_config_cli
 from slack_clacks.listen.cli import generate_listen_parser
 from slack_clacks.messaging.cli import (
     generate_delete_parser,
+    generate_edit_parser,
     generate_react_parser,
     generate_read_parser,
     generate_recent_parser,
@@ -87,6 +88,14 @@ def generate_cli() -> argparse.ArgumentParser:
         parents=[delete_parser],
         add_help=False,
         help=delete_parser.description,
+    )
+
+    edit_parser = generate_edit_parser()
+    subparsers.add_parser(
+        "edit",
+        parents=[edit_parser],
+        add_help=False,
+        help=edit_parser.description,
     )
 
     skill_parser = generate_skill_cli()

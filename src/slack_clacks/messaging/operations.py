@@ -237,6 +237,19 @@ def send_message(
     return client.chat_postMessage(channel=channel, text=text, thread_ts=thread_ts)
 
 
+def edit_message(
+    client: WebClient,
+    channel: str,
+    timestamp: str,
+    text: str,
+):
+    """
+    Edit an existing message in a channel or DM.
+    Returns the Slack API response.
+    """
+    return client.chat_update(channel=channel, ts=timestamp, text=text)
+
+
 def read_messages(
     client: WebClient,
     channel: str,

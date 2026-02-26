@@ -148,6 +148,23 @@ Reply to thread:
 clacks send -c "#general" -m "reply text" -t "1234567890.123456"
 ```
 
+### Edit
+
+Edit a message in channel:
+```bash
+clacks edit -c "#general" -m "1234567890.123456" --text "updated text"
+```
+
+Edit a direct message:
+```bash
+clacks edit -u "@username" -m "1234567890.123456" --text "updated text"
+```
+
+Edit using stdin:
+```bash
+echo "updated text from stdin" | clacks edit -c "#general" -m "1234567890.123456" --stdin
+```
+
 ### Read
 
 Read messages from channel:

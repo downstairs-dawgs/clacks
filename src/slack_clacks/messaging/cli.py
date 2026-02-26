@@ -14,6 +14,7 @@ from slack_clacks.constants import SLACK_TS_EPSILON
 from slack_clacks.messaging.operations import (
     add_reaction,
     delete_message,
+    edit_message,
     get_recent_activity,
     open_dm_channel,
     parse_timestamp,
@@ -397,6 +398,99 @@ def generate_react_parser() -> argparse.ArgumentParser:
         help="Output file for JSON results (default: stdout)",
     )
     parser.set_defaults(func=handle_react)
+
+    return parser
+
+
+def handle_edit(args: argparse.Namespace) -> None:
+    ensure_db_updated(config_dir=args.config_dir)
+    with get_session(args.config_dir) as session:
+        context = get_current_context(session)
+        if context is None:
+            raise ValueError(
+                "No active authentication context. Authenticate with: clacks auth login"
+            )
+
+        client = create_client(context.access_token, context.app_type)
+
+        if args.channel:
+            channel_id = resolve_channel_id(client, args.channel, session, context.name)
+        else:
+            user_id = resolve_user_id(client, args.user, session, context.name)
+            dm_channel = open_dm_channel(client, user_id)
+            if dm_channel is None:
+                raise ValueError(f"Failed to open DM with user '{args.user}'.")
+            channel_id = dm_channel
+
+        if args.stdin:
+            if sys.stdin.isatty():
+                raise ValueError("--stdin requires piped input")
+            text = sys.stdin.read()
+        else:
+            text = args.text
+
+        if text is None or not text.strip():
+            raise ValueError("Updated message text cannot be empty")
+
+        ts = resolve_message_timestamp(args.message)
+        response = edit_message(client, channel_id, ts, text)
+
+        with args.outfile as ofp:
+            json.dump(response.data, ofp)
+
+
+def generate_edit_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Edit a message",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+
+    parser.add_argument(
+        "-D",
+        "--config-dir",
+        type=str,
+        help="Configuration directory (default: platform-specific user config dir)",
+    )
+
+    target_group = parser.add_mutually_exclusive_group(required=True)
+    target_group.add_argument(
+        "-c",
+        "--channel",
+        type=str,
+        help="Channel ID or name (e.g., #general, C123456)",
+    )
+    target_group.add_argument(
+        "-u",
+        "--user",
+        type=str,
+        help="User ID or name for DM (e.g., @username, U123456)",
+    )
+    parser.add_argument(
+        "-m",
+        "--message",
+        type=str,
+        required=True,
+        help="Message timestamp or Slack link",
+    )
+    text_group = parser.add_mutually_exclusive_group(required=True)
+    text_group.add_argument(
+        "--text",
+        type=str,
+        help="Updated message text",
+    )
+    text_group.add_argument(
+        "--stdin",
+        action="store_true",
+        help="Read updated message text from stdin",
+    )
+    parser.add_argument(
+        "-o",
+        "--outfile",
+        type=argparse.FileType("a"),
+        default=sys.stdout,
+        help="Output file for JSON results (default: stdout)",
+    )
+    parser.set_defaults(func=handle_edit)
 
     return parser
 
