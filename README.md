@@ -217,6 +217,17 @@ clacks rolodex platforminfo -p github
 
 clacks supports the [Agent Skills](https://agentskills.io) open standard for AI coding assistants.
 
+Codex quick install (global):
+```bash
+clacks skill --mode codex
+# or: uvx --from slack-clacks clacks skill --mode codex
+```
+
+Reinstall/update an existing skill install:
+```bash
+clacks skill --mode codex --force
+```
+
 Print SKILL.md to stdout:
 ```bash
 clacks skill
@@ -243,6 +254,8 @@ clacks skill --mode github
 ```
 
 All modes support `-global` and `-project` suffixes (e.g., `claude-project`, `codex-global`).
+Install writes a full skill bundle: `SKILL.md`, `agents/openai.yaml`, and `LICENSE.txt`.
+If the target skill directory already exists, pass `--force` to overwrite.
 
 ## Output
 

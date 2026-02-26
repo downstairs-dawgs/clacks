@@ -1,0 +1,4 @@
+interface:
+  display_name: "Clacks"
+  short_description: "Send and read Slack messages in Codex"
+  default_prompt: "Use $clacks to send, read, and monitor Slack messages for this task."
