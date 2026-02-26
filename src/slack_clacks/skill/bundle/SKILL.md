@@ -83,6 +83,13 @@ Delete a message (your own messages only):
 uvx --from slack-clacks clacks delete -c "#general" -m "1234567890.123456"
 ```
 
+## Edit Messages
+
+Edit a message:
+```bash
+uvx --from slack-clacks clacks edit -c "#general" -m "1234567890.123456" --text "Updated text"
+```
+
 ## Uploading Files and Snippets
 
 Upload a file to a channel:
