@@ -14,6 +14,54 @@ description: >-
 
 Use the `clacks` CLI to interact with Slack workspaces.
 
+## Rolodex Sync (Do This First)
+
+The rolodex maps `@display-names` to Slack user/channel IDs.
+**Always use the rolodex to resolve @-mentions** —
+never guess or hardcode Slack IDs.
+
+At the start of any conversation that uses clacks, check when
+the rolodex was last synced by reading
+`~/.claude/skills/clacks/.rolodex-last-sync`. If the file
+doesn't exist or the timestamp is older than 7 days,
+**ask the user** if they'd like to sync the rolodex before
+proceeding. Do not sync automatically — always ask first.
+
+After syncing, write the current ISO 8601 timestamp to
+`~/.claude/skills/clacks/.rolodex-last-sync`.
+
+```bash
+# Sync the rolodex
+uvx --from slack-clacks clacks rolodex sync
+
+# Then look up users/channels before sending
+uvx --from slack-clacks clacks rolodex list
+uvx --from slack-clacks clacks rolodex list -T user
+uvx --from slack-clacks clacks rolodex list -T channel
+```
+
+When composing messages that mention people or target specific
+users/channels, **always look up the rolodex first** to resolve
+names to the correct Slack IDs.
+
+## Slack Markdown
+
+Slack uses its own markup syntax — it is **not** standard Markdown. Key differences:
+- Bold: `*bold*` (not `**bold**`)
+- Italic: `_italic_` (not `*italic*`)
+- Strikethrough: `~struck~` (not `~~struck~~`)
+- Code: `` `code` `` (same)
+- Code block: ` ```code``` ` (same, but no language hint)
+- Links: `<https://example.com|link text>` (not `[text](url)`)
+- User mentions: `<@U123456>` (use rolodex to get the ID)
+- Channel mentions: `<#C123456>` (use rolodex to get the ID)
+- Bullet lists: use plain `- item` or `• item`
+- Ordered lists: not natively supported; use `1. item` as plain text
+- Block quotes: `>` at the start of a line (same)
+
+**Always use Slack's markup syntax** when composing messages,
+not GitHub-flavored or standard Markdown.
+
 ## Prerequisites
 
 Authenticate with your Slack workspace (requires uv):
@@ -103,20 +151,6 @@ cat script.py | uvx --from slack-clacks clacks upload -c "#ops" -t python
 Private upload (returns permalink, not shared to any channel):
 ```bash
 echo "print('hello')" | uvx --from slack-clacks clacks upload -t python
-```
-
-## Rolodex (Aliases)
-
-Sync users and channels from Slack:
-```bash
-uvx --from slack-clacks clacks rolodex sync
-```
-
-List aliases:
-```bash
-uvx --from slack-clacks clacks rolodex list
-uvx --from slack-clacks clacks rolodex list -T user
-uvx --from slack-clacks clacks rolodex list -T channel
 ```
 
 ## Listening for Messages
