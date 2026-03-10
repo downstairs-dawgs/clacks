@@ -9,6 +9,15 @@ from slack_clacks import main
 from slack_clacks.skill.status import SkillInstallStatus
 
 
+def _system_exit_code(exc: SystemExit) -> int:
+    code = exc.code
+    if code is None:
+        return 0
+    if isinstance(code, int):
+        return code
+    return int(code)
+
+
 class TestMainSkillWarnings(unittest.TestCase):
     def _run_main(
         self,
@@ -36,7 +45,7 @@ class TestMainSkillWarnings(unittest.TestCase):
             try:
                 main(argv)
             except SystemExit as exc:
-                return int(exc.code), stdout.getvalue(), stderr.getvalue()
+                return _system_exit_code(exc), stdout.getvalue(), stderr.getvalue()
 
         return 0, stdout.getvalue(), stderr.getvalue()
 

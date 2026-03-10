@@ -17,6 +17,15 @@ from slack_clacks.skill.content import (
 from slack_clacks.skill.status import check_skill_install_status
 
 
+def _system_exit_code(exc: SystemExit) -> int:
+    code = exc.code
+    if code is None:
+        return 0
+    if isinstance(code, int):
+        return code
+    return int(code)
+
+
 class TestSkillCommand(unittest.TestCase):
     def _run_handle_skill(self, args: argparse.Namespace) -> tuple[int, str, str]:
         stdout = io.StringIO()
@@ -26,7 +35,7 @@ class TestSkillCommand(unittest.TestCase):
                 skill_cli.handle_skill(args)
                 return 0, stdout.getvalue(), stderr.getvalue()
             except SystemExit as exc:
-                return int(exc.code), stdout.getvalue(), stderr.getvalue()
+                return _system_exit_code(exc), stdout.getvalue(), stderr.getvalue()
 
     def test_prints_skill_md_when_no_output_args(self):
         args = argparse.Namespace(mode=None, outdir=None, force=False)
