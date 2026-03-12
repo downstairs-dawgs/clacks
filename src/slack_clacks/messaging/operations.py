@@ -4,7 +4,8 @@ Core messaging operations using Slack Web API.
 
 import re
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone, tzinfo
+from zoneinfo import ZoneInfo
 
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
@@ -37,7 +38,6 @@ def resolve_channel_id(
 
     channel_name = channel_identifier.lstrip("#")
 
-    # Check aliases first (requires context for security)
     if session is not None and context_name is not None:
         from slack_clacks.rolodex.operations import resolve_alias
 
@@ -45,7 +45,6 @@ def resolve_channel_id(
         if alias:
             return alias.target_id
 
-    # Fall back to API call with pagination
     try:
         cursor: str | None = None
         while True:
@@ -86,7 +85,6 @@ def resolve_user_id(
 
     username = user_identifier.lstrip("@")
 
-    # Check aliases first (requires context for security)
     if session is not None and context_name is not None:
         from slack_clacks.rolodex.operations import resolve_alias
 
@@ -94,7 +92,6 @@ def resolve_user_id(
         if alias:
             return alias.target_id
 
-    # Fall back to API call with pagination
     try:
         cursor: str | None = None
         while True:
@@ -123,19 +120,15 @@ def resolve_message_timestamp(timestamp_or_link: str) -> str:
     (https://workspace.slack.com/archives/C.../p1767795445338939).
     Returns timestamp or raises ValueError if format is invalid.
     """
-    # Check if it's a Slack message link
     if timestamp_or_link.startswith("http"):
-        # Link format: https://workspace.slack.com/archives/C08740LGAE6/p1767795445338939
         match = re.search(r"/p(\d+)(?:\?|#|$)", timestamp_or_link)
         if not match:
             raise ValueError(f"Invalid Slack message link: {timestamp_or_link}")
         raw_ts = match.group(1)
-        # Insert decimal point 6 chars from end: p1767795445338939 -> 1767795445.338939
         if len(raw_ts) <= 6:
             raise ValueError(f"Invalid timestamp in link: {timestamp_or_link}")
         return f"{raw_ts[:-6]}.{raw_ts[-6:]}"
 
-    # Assume it's a raw timestamp - validate format
     if "." not in timestamp_or_link:
         raise ValueError(
             f"Invalid timestamp format (missing decimal): {timestamp_or_link}"
@@ -167,18 +160,15 @@ def parse_timestamp(value: str) -> str:
     if not value:
         raise ValueError("Empty timestamp value")
 
-    # Slack message links
     if value.startswith("http"):
         return resolve_message_timestamp(value)
 
-    # Raw numeric timestamp (with or without decimal)
     try:
         float(value)
         return value
     except ValueError:
         pass
 
-    # Relative time: "N unit(s) ago"
     relative_match = re.match(
         r"^(\d+)\s+(second|minute|hour|day|week)s?\s+ago$", value, re.IGNORECASE
     )
@@ -195,9 +185,7 @@ def parse_timestamp(value: str) -> str:
         offset = amount * multipliers[unit]
         return str(time.time() - offset)
 
-    # ISO 8601 datetime
     try:
-        # Try with timezone info first
         dt = datetime.fromisoformat(value)
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
@@ -329,3 +317,160 @@ def delete_message(client: WebClient, channel: str, timestamp: str):
     Note: Users can only delete their own messages.
     """
     return client.chat_delete(channel=channel, ts=timestamp)
+
+
+# Timezone abbreviation mapping to fixed UTC offsets (in hours).
+# Using fixed offsets so "9pm CET" always means UTC+1, regardless of DST.
+# Users who want DST-aware behavior should use IANA zones directly
+# (e.g., "9pm Europe/Berlin").
+_TZ_FIXED_OFFSETS: dict[str, int | float] = {
+    "UTC": 0,
+    "GMT": 0,
+    "EST": -5,
+    "EDT": -4,
+    "CST": -6,
+    "CDT": -5,
+    "MST": -7,
+    "MDT": -6,
+    "PST": -8,
+    "PDT": -7,
+    "CET": 1,
+    "CEST": 2,
+    "EET": 2,
+    "EEST": 3,
+    "IST": 5.5,
+    "JST": 9,
+    "AEST": 10,
+    "AEDT": 11,
+    "NZST": 12,
+    "NZDT": 13,
+}
+
+
+def parse_schedule_time(value: str) -> int:
+    """
+    Parse a flexible time specification into a future Unix timestamp (integer).
+
+    Accepts:
+    - Unix timestamp: "1773500000"
+    - ISO 8601 datetime: "2026-03-12T21:00:00+01:00"
+    - Relative future time: "in 2 hours", "in 30 minutes"
+    - Time of day with timezone: "9pm CET", "21:00 EST", "2:30pm UTC"
+      (resolves to the next occurrence of that time)
+
+    Returns integer Unix timestamp for Slack's chat.scheduleMessage post_at param.
+    Raises ValueError on unrecognized formats or times in the past.
+    """
+    value = value.strip()
+    if not value:
+        raise ValueError("Empty schedule time value")
+
+    now = int(time.time())
+
+    try:
+        ts = int(float(value))
+    except (ValueError, OverflowError):
+        ts = None
+    if ts is not None:
+        if ts <= now:
+            raise ValueError(f"Schedule time is in the past: {value}")
+        return ts
+
+    relative_match = re.match(
+        r"^in\s+(\d+)\s+(second|minute|hour|day|week)s?$", value, re.IGNORECASE
+    )
+    if relative_match:
+        amount = int(relative_match.group(1))
+        if amount <= 0:
+            raise ValueError("Relative time amount must be positive")
+        unit = relative_match.group(2).lower()
+        multipliers = {
+            "second": 1,
+            "minute": 60,
+            "hour": 3600,
+            "day": 86400,
+            "week": 604800,
+        }
+        return now + amount * multipliers[unit]
+
+    try:
+        dt = datetime.fromisoformat(value)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        iso_ts = int(dt.timestamp())
+    except ValueError:
+        iso_ts = None
+    if iso_ts is not None:
+        if iso_ts <= now:
+            raise ValueError(f"Schedule time is in the past: {value}")
+        return iso_ts
+
+    time_tz_match = re.match(
+        r"^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\s+([A-Za-z][A-Za-z0-9/+\-_]*)$",
+        value,
+        re.IGNORECASE,
+    )
+    if time_tz_match:
+        hour = int(time_tz_match.group(1))
+        minute = int(time_tz_match.group(2) or "0")
+        ampm = time_tz_match.group(3)
+        tz_str = time_tz_match.group(4)
+
+        if ampm:
+            ampm = ampm.lower()
+            if hour < 1 or hour > 12:
+                raise ValueError(
+                    f"Invalid hour for 12-hour format: {hour}. Must be 1-12."
+                )
+            if ampm == "pm" and hour != 12:
+                hour += 12
+            elif ampm == "am" and hour == 12:
+                hour = 0
+        else:
+            if hour < 0 or hour > 23:
+                raise ValueError(
+                    f"Invalid hour for 24-hour format: {hour}. Must be 0-23."
+                )
+
+        if minute < 0 or minute > 59:
+            raise ValueError(f"Invalid minute: {minute}. Must be 0-59.")
+
+        tz_upper = tz_str.upper()
+        tz: tzinfo
+        if tz_upper in _TZ_FIXED_OFFSETS:
+            offset_hours = _TZ_FIXED_OFFSETS[tz_upper]
+            tz = timezone(timedelta(hours=offset_hours))
+        else:
+            try:
+                tz = ZoneInfo(tz_str)
+            except KeyError:
+                raise ValueError(f"Unknown timezone: {tz_str}")
+
+        now_in_tz = datetime.now(tz)
+        target = now_in_tz.replace(hour=hour, minute=minute, second=0, microsecond=0)
+        if target <= now_in_tz:
+            target += timedelta(days=1)
+
+        return int(target.timestamp())
+
+    raise ValueError(
+        f"Unrecognized schedule time format: {value}. "
+        "Expected Unix timestamp, ISO 8601 datetime, "
+        '"in N minutes/hours/days", or "9pm CET".'
+    )
+
+
+def schedule_message(
+    client: WebClient,
+    channel: str,
+    text: str,
+    post_at: int,
+    thread_ts: str | None = None,
+):
+    """
+    Schedule a message for future delivery.
+    Returns the Slack API response including scheduled_message_id.
+    """
+    return client.chat_scheduleMessage(
+        channel=channel, text=text, post_at=post_at, thread_ts=thread_ts
+    )
