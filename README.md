@@ -148,6 +148,13 @@ Reply to thread:
 clacks send -c "#general" -m "reply text" -t "1234567890.123456"
 ```
 
+Create a snippet in a DM to yourself from stdin:
+```bash
+git show HEAD~1 | clacks snippet -n diff.patch -t diff
+```
+
+`clacks snippet` prints the posted message permalink to stdout.
+
 ### Read
 
 Read messages from channel:

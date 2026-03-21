@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from slack_clacks.auth.validation import ClacksInsufficientPermissions
-from slack_clacks.upload.cli import handle_upload
+from slack_clacks.upload.cli import handle_snippet, handle_upload
 from slack_clacks.upload.operations import infer_filetype
 
 
@@ -255,6 +255,262 @@ class TestHandleUploadDefaultFilename(unittest.TestCase):
 
             call_kwargs = mock_upload_content.call_args
             self.assertEqual(call_kwargs.kwargs["filename"], "snippet.py")
+
+
+class TestHandleSnippet(unittest.TestCase):
+    @patch("slack_clacks.upload.cli.ensure_db_updated")
+    @patch("slack_clacks.upload.cli.get_session")
+    @patch("slack_clacks.upload.cli.create_client")
+    @patch("slack_clacks.upload.cli.upload_content")
+    @patch("slack_clacks.upload.cli.open_dm_channel")
+    @patch("slack_clacks.upload.cli._copy_to_clipboard")
+    def test_uploads_stdin_to_self_dm(
+        self,
+        mock_copy_to_clipboard,
+        mock_open_dm_channel,
+        mock_upload_content,
+        mock_create_client,
+        mock_get_session,
+        mock_ensure_db,
+    ):
+        mock_context = MagicMock()
+        mock_context.access_token = "xoxp-test"
+        mock_context.app_type = "clacks"
+        mock_context.name = "test-context"
+        mock_context.user_id = "USELF123"
+
+        mock_session = MagicMock()
+        mock_get_session.return_value.__enter__ = MagicMock(return_value=mock_session)
+        mock_get_session.return_value.__exit__ = MagicMock(return_value=False)
+
+        mock_open_dm_channel.return_value = "DSELF123"
+        mock_upload_content.return_value = {
+            "ok": True,
+            "file": {
+                "permalink": "https://x.com/f",
+                "shares": {
+                    "private": {
+                        "DSELF123": [{"ts": "1234567891.000001"}],
+                    }
+                },
+            },
+        }
+        mock_create_client.return_value.chat_getPermalink.return_value.data = {
+            "ok": True,
+            "permalink": "https://workspace.slack.com/archives/DSELF123/p1234567891000001",
+        }
+
+        with patch(
+            "slack_clacks.upload.cli.get_current_context",
+            return_value=mock_context,
+        ):
+            args = argparse.Namespace(
+                config_dir=None,
+                filename="build.log",
+                filetype="text",
+                title="Build log",
+                comment="nightly run",
+                thread="1234567890.123456",
+                outfile=io.StringIO(),
+            )
+
+            captured = io.StringIO()
+            with patch.object(sys, "stdin", io.StringIO("log line 1\nlog line 2\n")):
+                with patch.object(sys, "stdout", captured):
+                    handle_snippet(args)
+
+        mock_open_dm_channel.assert_called_once_with(
+            mock_create_client.return_value,
+            "USELF123",
+        )
+        mock_create_client.return_value.chat_getPermalink.assert_called_once_with(
+            channel="DSELF123",
+            message_ts="1234567891.000001",
+        )
+        mock_upload_content.assert_called_once_with(
+            mock_create_client.return_value,
+            content="log line 1\nlog line 2\n",
+            filename="build.log",
+            filetype="text",
+            title="Build log",
+            comment="nightly run",
+            channel_id="DSELF123",
+            thread_ts="1234567890.123456",
+        )
+        mock_copy_to_clipboard.assert_called_once_with(
+            "https://workspace.slack.com/archives/DSELF123/p1234567891000001"
+        )
+        self.assertEqual(
+            captured.getvalue(),
+            "https://workspace.slack.com/archives/DSELF123/p1234567891000001\n",
+        )
+
+    @patch("slack_clacks.upload.cli.ensure_db_updated")
+    @patch("slack_clacks.upload.cli.get_session")
+    @patch("slack_clacks.upload.cli.create_client")
+    @patch("slack_clacks.upload.cli.open_dm_channel")
+    @patch("slack_clacks.upload.cli.upload_content")
+    def test_rejects_stdout_as_json_outfile(
+        self,
+        mock_upload_content,
+        mock_open_dm_channel,
+        mock_create_client,
+        mock_get_session,
+        mock_ensure_db,
+    ):
+        mock_context = MagicMock()
+        mock_context.access_token = "xoxp-test"
+        mock_context.app_type = "clacks"
+        mock_context.name = "test-context"
+        mock_context.user_id = "USELF123"
+
+        mock_session = MagicMock()
+        mock_get_session.return_value.__enter__ = MagicMock(return_value=mock_session)
+        mock_get_session.return_value.__exit__ = MagicMock(return_value=False)
+
+        with patch(
+            "slack_clacks.upload.cli.get_current_context",
+            return_value=mock_context,
+        ):
+            args = argparse.Namespace(
+                config_dir=None,
+                filename=None,
+                filetype="text",
+                title=None,
+                comment=None,
+                thread=None,
+                outfile=sys.stdout,
+            )
+
+            with self.assertRaises(ValueError) as ctx:
+                handle_snippet(args)
+
+        self.assertIn("stdout is reserved for the message permalink", str(ctx.exception))
+        mock_create_client.assert_not_called()
+        mock_open_dm_channel.assert_not_called()
+        mock_upload_content.assert_not_called()
+
+    @patch("slack_clacks.upload.cli.ensure_db_updated")
+    @patch("slack_clacks.upload.cli.get_session")
+    def test_rejects_clacks_lite(self, mock_get_session, mock_ensure_db):
+        mock_context = MagicMock()
+        mock_context.access_token = "xoxp-test"
+        mock_context.app_type = "clacks-lite"
+        mock_context.name = "test-context"
+        mock_context.user_id = "USELF123"
+
+        mock_session = MagicMock()
+        mock_get_session.return_value.__enter__ = MagicMock(return_value=mock_session)
+        mock_get_session.return_value.__exit__ = MagicMock(return_value=False)
+
+        with patch(
+            "slack_clacks.upload.cli.get_current_context",
+            return_value=mock_context,
+        ):
+            args = argparse.Namespace(
+                config_dir=None,
+                filename=None,
+                filetype=None,
+                title=None,
+                comment=None,
+                thread=None,
+                outfile=io.StringIO(),
+            )
+
+            with self.assertRaises(ClacksInsufficientPermissions):
+                handle_snippet(args)
+
+    @patch("slack_clacks.upload.cli.ensure_db_updated")
+    @patch("slack_clacks.upload.cli.get_session")
+    @patch("slack_clacks.upload.cli.create_client")
+    @patch("slack_clacks.upload.cli.open_dm_channel")
+    def test_requires_stdin(
+        self,
+        mock_open_dm_channel,
+        mock_create_client,
+        mock_get_session,
+        mock_ensure_db,
+    ):
+        mock_context = MagicMock()
+        mock_context.access_token = "xoxp-test"
+        mock_context.app_type = "clacks"
+        mock_context.name = "test-context"
+        mock_context.user_id = "USELF123"
+
+        mock_session = MagicMock()
+        mock_get_session.return_value.__enter__ = MagicMock(return_value=mock_session)
+        mock_get_session.return_value.__exit__ = MagicMock(return_value=False)
+
+        mock_open_dm_channel.return_value = "DSELF123"
+
+        with patch(
+            "slack_clacks.upload.cli.get_current_context",
+            return_value=mock_context,
+        ):
+            args = argparse.Namespace(
+                config_dir=None,
+                filename=None,
+                filetype="python",
+                title=None,
+                comment=None,
+                thread=None,
+                outfile=io.StringIO(),
+            )
+
+            with patch.object(sys, "stdin", io.StringIO("")):
+                with self.assertRaises(ValueError) as ctx:
+                    handle_snippet(args)
+
+        self.assertIn("pipe snippet content to stdin", str(ctx.exception))
+
+    @patch("slack_clacks.upload.cli.ensure_db_updated")
+    @patch("slack_clacks.upload.cli.get_session")
+    @patch("slack_clacks.upload.cli.create_client")
+    @patch("slack_clacks.upload.cli.upload_content")
+    @patch("slack_clacks.upload.cli.open_dm_channel")
+    def test_requires_message_permalink(
+        self,
+        mock_open_dm_channel,
+        mock_upload_content,
+        mock_create_client,
+        mock_get_session,
+        mock_ensure_db,
+    ):
+        mock_context = MagicMock()
+        mock_context.access_token = "xoxp-test"
+        mock_context.app_type = "clacks"
+        mock_context.name = "test-context"
+        mock_context.user_id = "USELF123"
+
+        mock_session = MagicMock()
+        mock_get_session.return_value.__enter__ = MagicMock(return_value=mock_session)
+        mock_get_session.return_value.__exit__ = MagicMock(return_value=False)
+
+        mock_open_dm_channel.return_value = "DSELF123"
+        mock_upload_content.return_value = {
+            "ok": True,
+            "file": {"permalink": "https://x.com/f"},
+        }
+
+        with patch(
+            "slack_clacks.upload.cli.get_current_context",
+            return_value=mock_context,
+        ):
+            args = argparse.Namespace(
+                config_dir=None,
+                filename=None,
+                filetype="text",
+                title=None,
+                comment=None,
+                thread=None,
+                outfile=None,
+            )
+
+            with patch.object(sys, "stdin", io.StringIO("hello\n")):
+                with self.assertRaises(ValueError) as ctx:
+                    handle_snippet(args)
+
+        self.assertIn("resolve a permalink", str(ctx.exception))
 
 
 if __name__ == "__main__":

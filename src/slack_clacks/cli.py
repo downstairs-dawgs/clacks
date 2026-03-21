@@ -14,6 +14,7 @@ from slack_clacks.messaging.cli import (
 )
 from slack_clacks.rolodex.cli import generate_cli as generate_rolodex_cli
 from slack_clacks.skill.cli import generate_cli as generate_skill_cli
+from slack_clacks.upload.cli import generate_snippet_parser
 
 
 def generate_cli() -> argparse.ArgumentParser:
@@ -55,6 +56,14 @@ def generate_cli() -> argparse.ArgumentParser:
         parents=[send_parser],
         add_help=False,
         help=send_parser.description,
+    )
+
+    snippet_parser = generate_snippet_parser()
+    subparsers.add_parser(
+        "snippet",
+        parents=[snippet_parser],
+        add_help=False,
+        help=snippet_parser.description,
     )
 
     read_parser = generate_read_parser()

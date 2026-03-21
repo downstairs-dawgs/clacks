@@ -100,6 +100,13 @@ Pipe command output as a snippet:
 cat script.py | uvx --from slack-clacks clacks upload -c "#ops" -t python
 ```
 
+Pipe command output as a snippet to your self-DM:
+```bash
+git show HEAD~1 | uvx --from slack-clacks clacks snippet -n diff.patch -t diff
+```
+
+This command prints the posted message permalink to stdout.
+
 Private upload (returns permalink, not shared to any channel):
 ```bash
 echo "print('hello')" | uvx --from slack-clacks clacks upload -t python
