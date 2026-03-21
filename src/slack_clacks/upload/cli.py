@@ -112,7 +112,9 @@ def _extract_shared_message_ts(response: dict | bytes, channel_id: str) -> str |
     return None
 
 
-def _resolve_message_ts(client, upload_response: dict | bytes, channel_id: str) -> str | None:
+def _resolve_message_ts(
+    client, upload_response: dict | bytes, channel_id: str
+) -> str | None:
     """Resolve the message timestamp for a newly shared snippet."""
     message_ts = _extract_shared_message_ts(upload_response, channel_id)
     if message_ts is not None:
@@ -296,7 +298,9 @@ def handle_snippet(args: argparse.Namespace) -> None:
 
         message_permalink = _resolve_message_permalink(client, response, channel_id)
         if message_permalink is None:
-            raise ValueError("Failed to resolve a permalink for the posted snippet message.")
+            raise ValueError(
+                "Failed to resolve a permalink for the posted snippet message."
+            )
 
         if args.outfile is not None:
             with args.outfile as ofp:

@@ -420,7 +420,9 @@ class TestHandleSnippet(unittest.TestCase):
                     with patch.object(sys, "stdout", captured):
                         handle_snippet(args)
 
-        mock_get_file_info.assert_called_once_with(mock_create_client.return_value, "F123")
+        mock_get_file_info.assert_called_once_with(
+            mock_create_client.return_value, "F123"
+        )
         mock_create_client.return_value.chat_getPermalink.assert_called_once_with(
             channel="DSELF123",
             message_ts="1234567891.000001",
@@ -473,7 +475,9 @@ class TestHandleSnippet(unittest.TestCase):
             with self.assertRaises(ValueError) as ctx:
                 handle_snippet(args)
 
-        self.assertIn("stdout is reserved for the message permalink", str(ctx.exception))
+        self.assertIn(
+            "stdout is reserved for the message permalink", str(ctx.exception)
+        )
         mock_create_client.assert_not_called()
         mock_open_dm_channel.assert_not_called()
         mock_upload_content.assert_not_called()
