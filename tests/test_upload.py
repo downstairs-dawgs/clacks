@@ -348,6 +348,94 @@ class TestHandleSnippet(unittest.TestCase):
     @patch("slack_clacks.upload.cli.ensure_db_updated")
     @patch("slack_clacks.upload.cli.get_session")
     @patch("slack_clacks.upload.cli.create_client")
+    @patch("slack_clacks.upload.cli.upload_content")
+    @patch("slack_clacks.upload.cli.open_dm_channel")
+    @patch("slack_clacks.upload.cli.get_file_info")
+    @patch("slack_clacks.upload.cli._copy_to_clipboard")
+    def test_resolves_permalink_from_file_info_when_upload_has_no_shares(
+        self,
+        mock_copy_to_clipboard,
+        mock_get_file_info,
+        mock_open_dm_channel,
+        mock_upload_content,
+        mock_create_client,
+        mock_get_session,
+        mock_ensure_db,
+    ):
+        mock_context = MagicMock()
+        mock_context.access_token = "xoxp-test"
+        mock_context.app_type = "clacks"
+        mock_context.name = "test-context"
+        mock_context.user_id = "USELF123"
+
+        mock_session = MagicMock()
+        mock_get_session.return_value.__enter__ = MagicMock(return_value=mock_session)
+        mock_get_session.return_value.__exit__ = MagicMock(return_value=False)
+
+        mock_open_dm_channel.return_value = "DSELF123"
+        mock_upload_content.return_value = {
+            "ok": True,
+            "file": {
+                "id": "F123",
+                "permalink": "https://x.com/f",
+                "shares": {},
+            },
+        }
+        mock_get_file_info.return_value = {
+            "ok": True,
+            "file": {
+                "id": "F123",
+                "shares": {
+                    "private": {
+                        "DSELF123": [{"ts": "1234567891.000001"}],
+                    }
+                },
+            },
+        }
+        mock_create_client.return_value.chat_getPermalink.return_value.data = {
+            "ok": True,
+            "permalink": "https://workspace.slack.com/archives/DSELF123/p1234567891000001",
+        }
+
+        with patch(
+            "slack_clacks.upload.cli.get_current_context",
+            return_value=mock_context,
+        ):
+            args = argparse.Namespace(
+                config_dir=None,
+                filename="build.log",
+                filetype="text",
+                title=None,
+                comment=None,
+                thread=None,
+                outfile=None,
+            )
+
+            captured = io.StringIO()
+            with patch(
+                "slack_clacks.upload.cli._MESSAGE_LINK_RESOLUTION_DELAYS",
+                (0.0,),
+            ):
+                with patch.object(sys, "stdin", io.StringIO("log line 1\n")):
+                    with patch.object(sys, "stdout", captured):
+                        handle_snippet(args)
+
+        mock_get_file_info.assert_called_once_with(mock_create_client.return_value, "F123")
+        mock_create_client.return_value.chat_getPermalink.assert_called_once_with(
+            channel="DSELF123",
+            message_ts="1234567891.000001",
+        )
+        mock_copy_to_clipboard.assert_called_once_with(
+            "https://workspace.slack.com/archives/DSELF123/p1234567891000001"
+        )
+        self.assertEqual(
+            captured.getvalue(),
+            "https://workspace.slack.com/archives/DSELF123/p1234567891000001\n",
+        )
+
+    @patch("slack_clacks.upload.cli.ensure_db_updated")
+    @patch("slack_clacks.upload.cli.get_session")
+    @patch("slack_clacks.upload.cli.create_client")
     @patch("slack_clacks.upload.cli.open_dm_channel")
     @patch("slack_clacks.upload.cli.upload_content")
     def test_rejects_stdout_as_json_outfile(
@@ -468,8 +556,10 @@ class TestHandleSnippet(unittest.TestCase):
     @patch("slack_clacks.upload.cli.create_client")
     @patch("slack_clacks.upload.cli.upload_content")
     @patch("slack_clacks.upload.cli.open_dm_channel")
+    @patch("slack_clacks.upload.cli.get_file_info")
     def test_requires_message_permalink(
         self,
+        mock_get_file_info,
         mock_open_dm_channel,
         mock_upload_content,
         mock_create_client,
@@ -506,9 +596,13 @@ class TestHandleSnippet(unittest.TestCase):
                 outfile=None,
             )
 
-            with patch.object(sys, "stdin", io.StringIO("hello\n")):
-                with self.assertRaises(ValueError) as ctx:
-                    handle_snippet(args)
+            with patch(
+                "slack_clacks.upload.cli._MESSAGE_LINK_RESOLUTION_DELAYS",
+                (0.0,),
+            ):
+                with patch.object(sys, "stdin", io.StringIO("hello\n")):
+                    with self.assertRaises(ValueError) as ctx:
+                        handle_snippet(args)
 
         self.assertIn("resolve a permalink", str(ctx.exception))
 

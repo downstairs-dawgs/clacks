@@ -4,6 +4,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 
 from slack_clacks.auth.client import create_client
 from slack_clacks.auth.validation import get_scopes_for_mode, validate
@@ -12,6 +13,7 @@ from slack_clacks.configuration.database import (
     get_current_context,
     get_session,
 )
+from slack_clacks.files.operations import get_file_info
 from slack_clacks.messaging.operations import (
     open_dm_channel,
     resolve_channel_id,
@@ -25,6 +27,7 @@ from slack_clacks.upload.operations import (
 )
 
 _CLIPBOARD_COMMANDS = ["pbcopy", "xclip", "xsel"]
+_MESSAGE_LINK_RESOLUTION_DELAYS = (0.0, 0.5, 1.0, 2.0)
 
 
 def _copy_to_clipboard(text: str) -> None:
@@ -70,6 +73,19 @@ def _extract_primary_file_data(response: dict | bytes) -> dict | None:
     return None
 
 
+def _extract_file_id(response: dict | bytes) -> str | None:
+    """Extract the uploaded Slack file ID from a response payload."""
+    file_data = _extract_primary_file_data(response)
+    if file_data is None:
+        return None
+
+    file_id = file_data.get("id")
+    if isinstance(file_id, str) and file_id:
+        return file_id
+
+    return None
+
+
 def _extract_shared_message_ts(response: dict | bytes, channel_id: str) -> str | None:
     """Extract the message timestamp for a freshly shared file/snippet."""
     file_data = _extract_primary_file_data(response)
@@ -96,6 +112,31 @@ def _extract_shared_message_ts(response: dict | bytes, channel_id: str) -> str |
     return None
 
 
+def _resolve_message_ts(client, upload_response: dict | bytes, channel_id: str) -> str | None:
+    """Resolve the message timestamp for a newly shared snippet."""
+    message_ts = _extract_shared_message_ts(upload_response, channel_id)
+    if message_ts is not None:
+        return message_ts
+
+    file_id = _extract_file_id(upload_response)
+    if file_id is None:
+        return None
+
+    # Slack file share metadata often appears shortly after files_upload_v2 returns.
+    for delay in _MESSAGE_LINK_RESOLUTION_DELAYS:
+        if delay > 0:
+            time.sleep(delay)
+        try:
+            file_info = get_file_info(client, file_id)
+        except Exception:
+            continue
+        message_ts = _extract_shared_message_ts(file_info, channel_id)
+        if message_ts is not None:
+            return message_ts
+
+    return None
+
+
 def _extract_response_data(response: object) -> dict | None:
     """Normalize Slack SDK responses and bare dicts to a plain dict."""
     if isinstance(response, dict):
@@ -112,7 +153,7 @@ def _resolve_message_permalink(
     client, upload_response: dict | bytes, channel_id: str
 ) -> str | None:
     """Resolve a permalink for the newly posted message that shared the snippet."""
-    message_ts = _extract_shared_message_ts(upload_response, channel_id)
+    message_ts = _resolve_message_ts(client, upload_response, channel_id)
     if message_ts is None:
         return None
 
