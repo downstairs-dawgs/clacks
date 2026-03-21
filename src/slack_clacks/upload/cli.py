@@ -264,7 +264,8 @@ def handle_snippet(args: argparse.Namespace) -> None:
 
         if args.outfile is sys.stdout:
             raise ValueError(
-                "For clacks snippet, --outfile cannot be stdout because stdout is reserved for the message permalink."
+                "For clacks snippet, --outfile cannot be stdout because "
+                "stdout is reserved for the message permalink."
             )
 
         client = create_client(context.access_token, context.app_type)
@@ -431,7 +432,10 @@ def generate_snippet_parser() -> argparse.ArgumentParser:
         "--outfile",
         type=argparse.FileType("a"),
         default=None,
-        help="Optional output file for JSON results (stdout prints the message permalink)",
+        help=(
+            "Optional output file for JSON results "
+            "(stdout prints the message permalink)"
+        ),
     )
 
     parser.set_defaults(func=handle_snippet)
