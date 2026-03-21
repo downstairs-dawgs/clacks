@@ -1,0 +1,54 @@
+name: Version bump check
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  check-version-bump:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Check if version bump is required
+      run: |
+        # Get list of changed files in this PR
+        changed_files=$(git diff --name-only origin/main...HEAD)
+
+        # Check if all changed files are docs-only (README, CONTRIBUTING, .github/)
+        docs_only=true
+        for file in $changed_files; do
+          case "$file" in
+            .github/*|docs/*) ;;
+            *)
+              # Top-level .md files (no slashes in path, ends with .md)
+              if echo "$file" | grep -qE '^[^/]+\.md$'; then
+                continue
+              fi
+              docs_only=false
+              break
+              ;;
+          esac
+        done
+
+        if [ "$docs_only" = "true" ]; then
+          echo "Docs-only change, skipping version bump check."
+          exit 0
+        fi
+
+        # Version must have changed compared to main
+        main_version=$(git show origin/main:pyproject.toml | grep '^version' | head -1 | sed 's/.*"\(.*\)".*/\1/')
+        pr_version=$(grep '^version' pyproject.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
+
+        echo "main version: $main_version"
+        echo "PR version:   $pr_version"
+
+        if [ "$main_version" = "$pr_version" ]; then
+          echo "::error::Version in pyproject.toml was not bumped. Please bump the version for non-docs changes."
+          exit 1
+        fi
+
+        echo "Version bumped from $main_version to $pr_version."

@@ -31,8 +31,8 @@ uv run ruff format
 ## Version bumps
 
 Every PR must bump the version in `pyproject.toml` unless the PR **only** touches
-documentation (e.g. README, CONTRIBUTING, docs/). If your change touches any code,
-tests, or configuration, bump the version.
+documentation -- top-level `.md` files, the `docs/` directory, or `.github/`. If your
+change touches any code, tests, or configuration, bump the version.
 
 The version is the `version` field in the `[project]` section of `pyproject.toml`.
 
