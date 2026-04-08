@@ -1,6 +1,10 @@
 """
-SKILL.md content for clacks.
+Skill bundle content for clacks.
 """
+
+import hashlib
+import json
+from importlib.metadata import PackageNotFoundError, version
 
 SKILL_MD = """\
 ---
@@ -23,6 +27,11 @@ uvx --from slack-clacks clacks auth login -c <context-name>
 
 Using `uvx` ensures you always run the latest version. If clacks is installed globally
 via `uv tool install slack-clacks` or `pip install slack-clacks`, use `clacks` directly.
+
+If `clacks` warns that the installed skill is outdated, reinstall the matching skill
+bundle with `clacks skill --mode <current-mode> --force` or
+`uvx --from slack-clacks clacks skill --mode <current-mode> --force`.
+Use `-project` modes for project-local installs.
 
 ## Sending Messages
 
@@ -209,3 +218,100 @@ uvx --from slack-clacks clacks config info
 All commands output JSON to stdout.
 The `listen` command outputs NDJSON (one JSON object per line).
 """
+
+OPENAI_YAML = """\
+interface:
+  display_name: "Clacks"
+  short_description: "Send and read Slack messages in Codex"
+  default_prompt: "Use $clacks to send, read, and monitor Slack messages for this task."
+"""
+
+LICENSE_TXT = """\
+MIT License
+
+Copyright (c) 2025 Neeraj Kashyap
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
+
+BUNDLE_FILE_PATHS: tuple[str, ...] = (
+    "SKILL.md",
+    "agents/openai.yaml",
+    "LICENSE.txt",
+)
+
+MANIFEST_FILENAME = ".clacks-skill-manifest.json"
+MANIFEST_VERSION = 1
+
+
+def _get_package_version() -> str:
+    """Return the installed slack-clacks version when available."""
+    try:
+        return version("slack-clacks")
+    except PackageNotFoundError:
+        return "unknown"
+
+
+def _get_resource_contents() -> dict[str, str]:
+    """Return the static bundle files shipped with the package."""
+    return {
+        "SKILL.md": SKILL_MD,
+        "agents/openai.yaml": OPENAI_YAML,
+        "LICENSE.txt": LICENSE_TXT,
+    }
+
+
+def _get_bundle_hash(bundle_contents: dict[str, str]) -> str:
+    """Return a deterministic hash for the shipped bundle contents."""
+    payload = json.dumps(
+        bundle_contents,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _build_manifest(bundle_contents: dict[str, str]) -> dict[str, object]:
+    """Build the manifest describing the shipped bundle."""
+    return {
+        "bundle_files": sorted(bundle_contents),
+        "bundle_hash": _get_bundle_hash(bundle_contents),
+        "manifest_version": MANIFEST_VERSION,
+        "package_version": _get_package_version(),
+    }
+
+
+def get_bundle_manifest() -> dict[str, object]:
+    """Return the manifest for the shipped bundle."""
+    return _build_manifest(_get_resource_contents())
+
+
+def get_bundle_contents() -> dict[str, str]:
+    """Return bundled skill files keyed by relative path."""
+    bundle_contents = _get_resource_contents()
+    bundle_contents[MANIFEST_FILENAME] = (
+        json.dumps(_build_manifest(bundle_contents), indent=2, sort_keys=True) + "\n"
+    )
+    return bundle_contents
+
+
+def get_skill_md() -> str:
+    """Return SKILL.md from the bundled resources."""
+    return SKILL_MD
