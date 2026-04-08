@@ -91,6 +91,26 @@ Reply to thread:
 uvx --from slack-clacks clacks send -c "#general" -m "Reply text" -t "1234567890.123456"
 ```
 
+## Scheduling Messages
+
+Schedule a message for future delivery:
+```bash
+uvx --from slack-clacks clacks schedule -c "#general" \\
+  -m "Reminder: standup" --at "9:45am UTC"
+uvx --from slack-clacks clacks schedule -u "@username" \\
+  -m "Don't forget!" --at "in 2 hours"
+uvx --from slack-clacks clacks schedule -c "#general" \\
+  -m "Weekly reminder" --at "2026-03-15T09:00:00+01:00"
+```
+
+Supported time formats for `--at`:
+- Time with timezone: `9pm CET`, `21:00 EST`, `2:30pm UTC`
+- Relative: `in 30 minutes`, `in 2 hours`, `in 1 day`
+- ISO 8601: `2026-03-15T09:00:00+01:00`
+- Unix timestamp: `1773500000`
+
+Note: Slack limits scheduling to 120 days in the future.
+
 ## Reading Messages
 
 Read from channel:
