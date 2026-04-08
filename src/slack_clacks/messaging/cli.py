@@ -2,6 +2,7 @@ import argparse
 import json
 import sys
 from decimal import Decimal
+from typing import Any
 
 from slack_clacks.auth.client import create_client
 from slack_clacks.auth.validation import get_scopes_for_mode, validate
@@ -16,6 +17,7 @@ from slack_clacks.messaging.operations import (
     delete_message,
     get_recent_activity,
     open_dm_channel,
+    parse_schedule_time,
     parse_timestamp,
     read_messages,
     read_thread,
@@ -23,8 +25,27 @@ from slack_clacks.messaging.operations import (
     resolve_channel_id,
     resolve_message_timestamp,
     resolve_user_id,
+    schedule_message,
     send_message,
 )
+
+
+def _resolve_target_channel(
+    client: Any,
+    args: argparse.Namespace,
+    session: Any,
+    context_name: str,
+) -> str:
+    if getattr(args, "channel", None):
+        return resolve_channel_id(client, args.channel, session, context_name)
+    elif getattr(args, "user", None):
+        user_id = resolve_user_id(client, args.user, session, context_name)
+        channel_id = open_dm_channel(client, user_id)
+        if channel_id is None:
+            raise ValueError(f"Failed to open DM with user '{args.user}'.")
+        return channel_id
+    else:
+        raise ValueError("Must specify either --channel or --user.")
 
 
 def handle_send(args: argparse.Namespace) -> None:
@@ -37,19 +58,7 @@ def handle_send(args: argparse.Namespace) -> None:
             )
 
         client = create_client(context.access_token, context.app_type)
-
-        channel_id = None
-
-        if args.channel:
-            channel_id = resolve_channel_id(client, args.channel, session, context.name)
-        elif args.user:
-            user_id = resolve_user_id(client, args.user, session, context.name)
-            channel_id = open_dm_channel(client, user_id)
-            if channel_id is None:
-                raise ValueError(f"Failed to open DM with user '{args.user}'.")
-        else:
-            raise ValueError("Must specify either --channel or --user.")
-
+        channel_id = _resolve_target_channel(client, args, session, context.name)
         response = send_message(client, channel_id, args.message, thread_ts=args.thread)
 
         with args.outfile as ofp:
@@ -101,6 +110,85 @@ def generate_send_parser() -> argparse.ArgumentParser:
         help="Output file for JSON results (default: stdout)",
     )
     parser.set_defaults(func=handle_send)
+
+    return parser
+
+
+def handle_schedule(args: argparse.Namespace) -> None:
+    ensure_db_updated(config_dir=args.config_dir)
+    with get_session(args.config_dir) as session:
+        context = get_current_context(session)
+        if context is None:
+            raise ValueError(
+                "No active authentication context. Authenticate with: clacks auth login"
+            )
+
+        client = create_client(context.access_token, context.app_type)
+        channel_id = _resolve_target_channel(client, args, session, context.name)
+        post_at = parse_schedule_time(args.at)
+        response = schedule_message(
+            client, channel_id, args.message, post_at, thread_ts=args.thread
+        )
+
+        with args.outfile as ofp:
+            json.dump(response.data, ofp)
+
+
+def generate_schedule_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Schedule a message for future delivery",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+
+    parser.add_argument(
+        "-D",
+        "--config-dir",
+        type=str,
+        help="Configuration directory (default: platform-specific user config dir)",
+    )
+    parser.add_argument(
+        "-c",
+        "--channel",
+        type=str,
+        help="Channel ID or name (e.g., #general, C123456)",
+    )
+    parser.add_argument(
+        "-u",
+        "--user",
+        type=str,
+        help="User ID or name for DM (e.g., @username, U123456)",
+    )
+    parser.add_argument(
+        "-m",
+        "--message",
+        type=str,
+        required=True,
+        help="Message text",
+    )
+    parser.add_argument(
+        "-a",
+        "--at",
+        type=str,
+        required=True,
+        help=(
+            "When to send (e.g., '9pm CET', '21:00 UTC', "
+            "'in 2 hours', '2026-03-12T21:00:00+01:00')"
+        ),
+    )
+    parser.add_argument(
+        "-t",
+        "--thread",
+        type=str,
+        help="Thread timestamp for replying to thread",
+    )
+    parser.add_argument(
+        "-o",
+        "--outfile",
+        type=argparse.FileType("a"),
+        default=sys.stdout,
+        help="Output file for JSON results (default: stdout)",
+    )
+    parser.set_defaults(func=handle_schedule)
 
     return parser
 
@@ -323,16 +411,7 @@ def handle_react(args: argparse.Namespace) -> None:
             )
 
         client = create_client(context.access_token, context.app_type)
-
-        if args.channel:
-            channel_id = resolve_channel_id(client, args.channel, session, context.name)
-        else:
-            user_id = resolve_user_id(client, args.user, session, context.name)
-            dm_channel = open_dm_channel(client, user_id)
-            if dm_channel is None:
-                raise ValueError(f"Failed to open DM with user '{args.user}'.")
-            channel_id = dm_channel
-
+        channel_id = _resolve_target_channel(client, args, session, context.name)
         ts = resolve_message_timestamp(args.message)
 
         if args.remove:
@@ -411,16 +490,7 @@ def handle_delete(args: argparse.Namespace) -> None:
             )
 
         client = create_client(context.access_token, context.app_type)
-
-        if args.channel:
-            channel_id = resolve_channel_id(client, args.channel, session, context.name)
-        else:
-            user_id = resolve_user_id(client, args.user, session, context.name)
-            dm_channel = open_dm_channel(client, user_id)
-            if dm_channel is None:
-                raise ValueError(f"Failed to open DM with user '{args.user}'.")
-            channel_id = dm_channel
-
+        channel_id = _resolve_target_channel(client, args, session, context.name)
         ts = resolve_message_timestamp(args.message)
         response = delete_message(client, channel_id, ts)
 

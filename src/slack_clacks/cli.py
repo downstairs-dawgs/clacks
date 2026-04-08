@@ -10,6 +10,7 @@ from slack_clacks.messaging.cli import (
     generate_react_parser,
     generate_read_parser,
     generate_recent_parser,
+    generate_schedule_parser,
     generate_send_parser,
 )
 from slack_clacks.rolodex.cli import generate_cli as generate_rolodex_cli
@@ -55,6 +56,14 @@ def generate_cli() -> argparse.ArgumentParser:
         parents=[send_parser],
         add_help=False,
         help=send_parser.description,
+    )
+
+    schedule_parser = generate_schedule_parser()
+    subparsers.add_parser(
+        "schedule",
+        parents=[schedule_parser],
+        add_help=False,
+        help=schedule_parser.description,
     )
 
     read_parser = generate_read_parser()
