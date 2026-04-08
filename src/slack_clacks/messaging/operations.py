@@ -5,6 +5,7 @@ Core messaging operations using Slack Web API.
 import re
 import time
 from datetime import datetime, timedelta, timezone, tzinfo
+from typing import Any
 from zoneinfo import ZoneInfo
 
 from slack_sdk import WebClient
@@ -458,6 +459,32 @@ def parse_schedule_time(value: str) -> int:
         "Expected Unix timestamp, ISO 8601 datetime, "
         '"in N minutes/hours/days", or "9pm CET".'
     )
+
+
+def search_messages(
+    client: WebClient,
+    query: str,
+    sort: str = "timestamp",
+    sort_dir: str = "desc",
+    count: int = 20,
+    page: int | None = None,
+    cursor: str | None = None,
+):
+    """
+    Search messages across the workspace.
+    Returns the Slack API response.
+    """
+    kwargs: dict[str, Any] = {
+        "query": query,
+        "sort": sort,
+        "sort_dir": sort_dir,
+        "count": count,
+    }
+    if cursor is not None:
+        kwargs["cursor"] = cursor
+    elif page is not None:
+        kwargs["page"] = page
+    return client.search_messages(**kwargs)
 
 
 def schedule_message(

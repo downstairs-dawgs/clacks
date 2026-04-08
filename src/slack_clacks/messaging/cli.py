@@ -26,6 +26,7 @@ from slack_clacks.messaging.operations import (
     resolve_message_timestamp,
     resolve_user_id,
     schedule_message,
+    search_messages,
     send_message,
 )
 
@@ -476,6 +477,117 @@ def generate_react_parser() -> argparse.ArgumentParser:
         help="Output file for JSON results (default: stdout)",
     )
     parser.set_defaults(func=handle_react)
+
+    return parser
+
+
+def handle_search(args: argparse.Namespace) -> None:
+    ensure_db_updated(config_dir=args.config_dir)
+    with get_session(args.config_dir) as session:
+        context = get_current_context(session)
+        if context is None:
+            raise ValueError(
+                "No active authentication context. Authenticate with: clacks auth login"
+            )
+
+        scopes = get_scopes_for_mode(context.app_type)
+        validate("search:read", scopes, raise_on_error=True)
+
+        if not args.query.strip():
+            raise ValueError("Search query cannot be empty.")
+
+        if args.limit < 1 or args.limit > 100:
+            raise ValueError("Limit must be between 1 and 100.")
+
+        client = create_client(context.access_token, context.app_type)
+        response = search_messages(
+            client,
+            query=args.query,
+            sort=args.sort,
+            sort_dir=args.sort_dir,
+            count=args.limit,
+            page=args.page,
+            cursor=args.cursor,
+        )
+
+        with args.outfile as ofp:
+            json.dump(response.data, ofp)
+
+
+def generate_search_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Search messages across the workspace",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""\
+examples:
+  clacks search -q "deployment error"
+  clacks search -q "in:#general deployment error"
+  clacks search -q "from:@alice bug fix"
+  clacks search -q "in:#ops from:@alice after:2026-01-01"
+  clacks search -q "has:link in:#general" --sort score
+""",
+    )
+
+    parser.add_argument(
+        "-D",
+        "--config-dir",
+        type=str,
+        help="Configuration directory (default: platform-specific user config dir)",
+    )
+    parser.add_argument(
+        "-q",
+        "--query",
+        type=str,
+        required=True,
+        help=(
+            "Search query. Use in:#channel to restrict to a channel, "
+            "from:@user to filter by sender, before:/after:/on:YYYY-MM-DD "
+            "for date ranges, has:link/pin/star for attributes."
+        ),
+    )
+    parser.add_argument(
+        "-s",
+        "--sort",
+        type=str,
+        choices=["timestamp", "score"],
+        default="timestamp",
+        help="Sort results by timestamp or relevance score (default: timestamp)",
+    )
+    parser.add_argument(
+        "--sort-dir",
+        type=str,
+        choices=["asc", "desc"],
+        default="desc",
+        help="Sort direction (default: desc)",
+    )
+    parser.add_argument(
+        "-l",
+        "--limit",
+        type=int,
+        default=20,
+        help="Results per page, 1-100 (default: 20)",
+    )
+
+    pagination_group = parser.add_mutually_exclusive_group()
+    pagination_group.add_argument(
+        "--page",
+        type=int,
+        help="Page number for page-based pagination",
+    )
+    pagination_group.add_argument(
+        "--cursor",
+        type=str,
+        help="Cursor for cursor-based pagination (from previous response)",
+    )
+
+    parser.add_argument(
+        "-o",
+        "--outfile",
+        type=argparse.FileType("a"),
+        default=sys.stdout,
+        help="Output file for JSON results (default: stdout)",
+    )
+    parser.set_defaults(func=handle_search)
 
     return parser
 

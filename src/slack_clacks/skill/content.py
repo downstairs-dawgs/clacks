@@ -10,8 +10,9 @@ SKILL_MD = """\
 ---
 name: clacks
 description: >-
-  Send and read Slack messages using clacks CLI. Use when user asks to send
-  Slack messages, read channels, wait for responses, or interact with Slack.
+  Send, read, and search Slack messages using clacks CLI. Use when user asks to
+  send Slack messages, search message history, read channels, wait for
+  responses, or interact with Slack.
 ---
 
 # Slack Integration via Clacks
@@ -119,6 +120,46 @@ Supported time formats for `--at`:
 - Unix timestamp: `1773500000`
 
 Note: Slack limits scheduling to 120 days in the future.
+
+## Searching Messages
+
+Search across the entire workspace:
+```bash
+uvx --from slack-clacks clacks search -q "deployment error"
+```
+
+Search within a specific channel:
+```bash
+uvx --from slack-clacks clacks search -q "in:#general deployment error"
+```
+
+Search messages from a specific user:
+```bash
+uvx --from slack-clacks clacks search -q "from:@alice bug fix"
+```
+
+Combine filters:
+```bash
+uvx --from slack-clacks clacks search -q "in:#ops from:@alice after:2026-01-01"
+uvx --from slack-clacks clacks search -q "has:link in:#general" --sort score
+```
+
+Supported query filters (included in the `-q` string):
+- `in:#channel` - restrict to a channel
+- `from:@user` - messages from a specific user
+- `before:YYYY-MM-DD` / `after:YYYY-MM-DD` / `on:YYYY-MM-DD` - date filters
+- `has:link`, `has:pin`, `has:star`, `has:emoji` - message attributes
+
+Options:
+- `-s, --sort` - Sort by `timestamp` (default) or `score` (relevance)
+- `--sort-dir` - Sort direction: `asc` or `desc` (default)
+- `-l, --limit` - Results per page, 1-100 (default: 20)
+- `--page` / `--cursor` - Pagination (mutually exclusive)
+
+Use the rolodex to resolve display names to Slack IDs when building
+`from:` or `in:` filters.
+
+Note: Search requires `search:read` scope (not available in clacks-lite mode).
 
 ## Reading Messages
 
