@@ -145,10 +145,18 @@ uvx --from slack-clacks clacks search -q "has:link in:#general" --sort score
 ```
 
 Supported query filters (included in the `-q` string):
-- `in:#channel` - restrict to a channel
+- `in:#channel` - restrict to a channel or DM
 - `from:@user` - messages from a specific user
+- `with:@user` - threads and DMs with a specific user
 - `before:YYYY-MM-DD` / `after:YYYY-MM-DD` / `on:YYYY-MM-DD` - date filters
-- `has:link`, `has:pin`, `has:star`, `has:emoji` - message attributes
+- `during:YYYY-MM` - messages during a month (e.g., `during:2026-03`)
+- `has:link` - messages containing links
+- `has:pin` - pinned messages
+- `has::emoji:` - messages with a specific emoji reaction
+- `is:thread` - thread messages only
+- `is:saved` - your saved items
+- `"exact phrase"` - exact phrase match
+- `-word` - exclude messages containing a word
 
 Options:
 - `-s, --sort` - Sort by `timestamp` (default) or `score` (relevance)

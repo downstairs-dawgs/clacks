@@ -523,8 +523,11 @@ examples:
   clacks search -q "deployment error"
   clacks search -q "in:#general deployment error"
   clacks search -q "from:@alice bug fix"
+  clacks search -q "with:@bob in:#project"
   clacks search -q "in:#ops from:@alice after:2026-01-01"
   clacks search -q "has:link in:#general" --sort score
+  clacks search -q "is:thread during:2026-03"
+  clacks search -q '"exact error message" -wip'
 """,
     )
 
@@ -540,9 +543,10 @@ examples:
         type=str,
         required=True,
         help=(
-            "Search query. Use in:#channel to restrict to a channel, "
-            "from:@user to filter by sender, before:/after:/on:YYYY-MM-DD "
-            "for date ranges, has:link/pin/star for attributes."
+            "Search query. Supports filters: "
+            "in:#channel, from:@user, with:@user, "
+            "before:/after:/on:YYYY-MM-DD, during:YYYY-MM, "
+            'has:link/pin/:emoji:, is:thread/saved, "exact phrase", -exclude.'
         ),
     )
     parser.add_argument(
