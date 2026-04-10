@@ -231,8 +231,8 @@ def generate_cli() -> argparse.ArgumentParser:
         "-l",
         "--limit",
         type=int,
-        default=100,
-        help="Maximum results (default: 100)",
+        default=None,
+        help="Maximum results",
     )
     list_parser.add_argument(
         "--offset",
