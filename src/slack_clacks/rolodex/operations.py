@@ -91,7 +91,7 @@ def list_aliases(
     platform: str | None = None,
     target_type: str | None = None,
     target_id: str | None = None,
-    limit: int = 100,
+    limit: int | None = None,
     offset: int = 0,
 ) -> list[Alias]:
     """List aliases with optional filtering."""
@@ -102,7 +102,12 @@ def list_aliases(
         query = query.filter(Alias.target_type == target_type)
     if target_id is not None:
         query = query.filter(Alias.target_id == target_id)
-    return query.order_by(Alias.alias).limit(limit).offset(offset).all()
+    query = query.order_by(Alias.alias)
+    if limit is not None:
+        query = query.limit(limit)
+    if offset:
+        query = query.offset(offset)
+    return query.all()
 
 
 def remove_alias(
