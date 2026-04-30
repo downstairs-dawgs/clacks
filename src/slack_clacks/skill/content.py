@@ -218,17 +218,17 @@ uvx --from slack-clacks clacks delete -c "#general" -m "1234567890.123456"
 
 Upload a file to a channel:
 ```bash
-uvx --from slack-clacks clacks upload -c "#general" -f /path/to/file.py
+uvx --from slack-clacks clacks files upload -c "#general" -f /path/to/file.py
 ```
 
 Pipe command output as a snippet:
 ```bash
-cat script.py | uvx --from slack-clacks clacks upload -c "#ops" -t python
+cat script.py | uvx --from slack-clacks clacks files upload -c "#ops" -t python
 ```
 
 Private upload (returns permalink, not shared to any channel):
 ```bash
-echo "print('hello')" | uvx --from slack-clacks clacks upload -t python
+echo "print('hello')" | uvx --from slack-clacks clacks files upload -t python
 ```
 
 ## Listening for Messages
