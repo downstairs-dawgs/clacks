@@ -25,15 +25,9 @@ The rolodex maps `@display-names` to Slack user/channel IDs.
 **Always use the rolodex to resolve @-mentions** —
 never guess or hardcode Slack IDs.
 
-At the start of any conversation that uses clacks, check when
-the rolodex was last synced by reading
-`~/.claude/skills/clacks/.rolodex-last-sync`. If the file
-doesn't exist or the timestamp is older than 7 days,
-**ask the user** if they'd like to sync the rolodex before
-proceeding. Do not sync automatically — always ask first.
-
-After syncing, write the current ISO 8601 timestamp to
-`~/.claude/skills/clacks/.rolodex-last-sync`.
+At the start of any conversation that uses clacks, ask the user
+before running `clacks rolodex sync` if aliases may be stale.
+Do not sync automatically — always ask first.
 
 ```bash
 # Sync the rolodex
