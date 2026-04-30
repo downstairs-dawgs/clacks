@@ -121,6 +121,12 @@ class TestSkillCommand(unittest.TestCase):
         self.assertEqual(third_code, 0)
         self.assertEqual(third_stderr, "")
 
+    def test_universal_mode_uses_agents_directory(self):
+        self.assertEqual(skill_cli.MODE_DIRS["universal"], "~/.agents/skills/clacks")
+        self.assertEqual(
+            skill_cli.MODE_DIRS["universal-project"], ".agents/skills/clacks"
+        )
+
     def test_installed_openai_yaml_has_expected_interface_fields(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             install_dir = Path(tmpdir) / "skills" / "clacks"
@@ -168,6 +174,23 @@ class TestSkillInstallStatus(unittest.TestCase):
             status = check_skill_install_status(cwd=cwd, home=home)
 
         self.assertIsNone(status)
+
+    def test_universal_install_status_uses_agents_directory(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            cwd = root / "workspace"
+            home = root / "home"
+            cwd.mkdir()
+            home.mkdir()
+            install_dir = home / ".agents" / "skills" / "clacks"
+            self._write_bundle(install_dir)
+
+            status = check_skill_install_status(cwd=cwd, home=home)
+
+        self.assertIsNotNone(status)
+        assert status is not None
+        self.assertEqual(status.mode, "universal")
+        self.assertEqual(status.path, install_dir)
 
     def test_matching_installed_skill_is_current(self):
         with tempfile.TemporaryDirectory() as tmpdir:

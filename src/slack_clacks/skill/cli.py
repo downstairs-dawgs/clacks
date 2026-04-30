@@ -18,9 +18,9 @@ MODE_DIRS: dict[str, str] = {
     "codex": "~/.codex/skills/clacks",
     "codex-global": "~/.codex/skills/clacks",
     "codex-project": ".codex/skills/clacks",
-    "universal": "~/.agent/skills/clacks",
-    "universal-global": "~/.agent/skills/clacks",
-    "universal-project": ".agent/skills/clacks",
+    "universal": "~/.agents/skills/clacks",
+    "universal-global": "~/.agents/skills/clacks",
+    "universal-project": ".agents/skills/clacks",
     "github": ".github/skills/clacks",
 }
 
