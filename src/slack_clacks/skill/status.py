@@ -33,11 +33,11 @@ def get_skill_install_candidates(
     return (
         ("codex-project", current_dir / ".codex" / "skills" / "clacks"),
         ("claude-project", current_dir / ".claude" / "skills" / "clacks"),
-        ("universal-project", current_dir / ".agent" / "skills" / "clacks"),
+        ("universal-project", current_dir / ".agents" / "skills" / "clacks"),
         ("github", current_dir / ".github" / "skills" / "clacks"),
         ("codex", home_dir / ".codex" / "skills" / "clacks"),
         ("claude", home_dir / ".claude" / "skills" / "clacks"),
-        ("universal", home_dir / ".agent" / "skills" / "clacks"),
+        ("universal", home_dir / ".agents" / "skills" / "clacks"),
     )
 
 

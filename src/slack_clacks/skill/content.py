@@ -25,15 +25,9 @@ The rolodex maps `@display-names` to Slack user/channel IDs.
 **Always use the rolodex to resolve @-mentions** —
 never guess or hardcode Slack IDs.
 
-At the start of any conversation that uses clacks, check when
-the rolodex was last synced by reading
-`~/.claude/skills/clacks/.rolodex-last-sync`. If the file
-doesn't exist or the timestamp is older than 7 days,
-**ask the user** if they'd like to sync the rolodex before
-proceeding. Do not sync automatically — always ask first.
-
-After syncing, write the current ISO 8601 timestamp to
-`~/.claude/skills/clacks/.rolodex-last-sync`.
+At the start of any conversation that uses clacks, ask the user
+before running `clacks rolodex sync` if aliases may be stale.
+Do not sync automatically — always ask first.
 
 ```bash
 # Sync the rolodex
@@ -218,17 +212,17 @@ uvx --from slack-clacks clacks delete -c "#general" -m "1234567890.123456"
 
 Upload a file to a channel:
 ```bash
-uvx --from slack-clacks clacks upload -c "#general" -f /path/to/file.py
+uvx --from slack-clacks clacks files upload -c "#general" -f /path/to/file.py
 ```
 
 Pipe command output as a snippet:
 ```bash
-cat script.py | uvx --from slack-clacks clacks upload -c "#ops" -t python
+cat script.py | uvx --from slack-clacks clacks files upload -c "#ops" -t python
 ```
 
 Private upload (returns permalink, not shared to any channel):
 ```bash
-echo "print('hello')" | uvx --from slack-clacks clacks upload -t python
+echo "print('hello')" | uvx --from slack-clacks clacks files upload -t python
 ```
 
 ## Listening for Messages
