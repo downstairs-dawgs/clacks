@@ -31,7 +31,7 @@ from slack_clacks.messaging.operations import (
 )
 
 
-def _sort_messages_by_ts(messages: list, order: str) -> list:
+def sort_messages_by_ts(messages: list, order: str) -> list:
     """Sort a list of Slack message dicts by their ``ts`` field.
 
     Slack ``ts`` is a string of the form ``"<seconds>.<micros>"``. We parse
@@ -48,7 +48,7 @@ def _sort_messages_by_ts(messages: list, order: str) -> list:
     return sorted(messages, key=_key, reverse=(order == "desc"))
 
 
-def _add_order_argument(parser: argparse.ArgumentParser) -> None:
+def add_order_argument(parser: argparse.ArgumentParser) -> None:
     """Attach the shared ``--order {asc,desc}`` flag.
 
     Default ``desc`` preserves Slack's native reverse-chronological return
@@ -291,8 +291,7 @@ def handle_read(args: argparse.Namespace) -> None:
             )
 
         data = dict(response.data)
-        if isinstance(data.get("messages"), list):
-            data["messages"] = _sort_messages_by_ts(data["messages"], args.order)
+        data["messages"] = sort_messages_by_ts(data.get("messages", []), args.order)
 
         with args.outfile as ofp:
             json.dump(data, ofp)
@@ -380,7 +379,7 @@ def generate_read_parser() -> argparse.ArgumentParser:
         default=20,
         help="Max messages to retrieve (default: 20)",
     )
-    _add_order_argument(parser)
+    add_order_argument(parser)
     parser.add_argument(
         "-o",
         "--outfile",
@@ -408,7 +407,7 @@ def handle_recent(args: argparse.Namespace) -> None:
         client = create_client(context.access_token, context.app_type)
 
         messages = get_recent_activity(client, message_limit=args.limit)
-        messages = _sort_messages_by_ts(messages, args.order)
+        messages = sort_messages_by_ts(messages, args.order)
 
         with args.outfile as ofp:
             json.dump(messages, ofp)
@@ -433,7 +432,7 @@ def generate_recent_parser() -> argparse.ArgumentParser:
         default=20,
         help="Max recent messages to retrieve (default: 20)",
     )
-    _add_order_argument(parser)
+    add_order_argument(parser)
     parser.add_argument(
         "-o",
         "--outfile",
@@ -560,11 +559,9 @@ def handle_search(args: argparse.Namespace) -> None:
         # shape is ``{messages: {matches: [...], paging: {...}, ...}}``;
         # we re-sort ``matches`` in place and leave pagination alone.
         data = dict(response.data)
-        nested = data.get("messages")
-        if isinstance(nested, dict) and isinstance(nested.get("matches"), list):
-            nested = dict(nested)
-            nested["matches"] = _sort_messages_by_ts(nested["matches"], args.order)
-            data["messages"] = nested
+        nested = dict(data.get("messages", {}))
+        nested["matches"] = sort_messages_by_ts(nested.get("matches", []), args.order)
+        data["messages"] = nested
 
         with args.outfile as ofp:
             json.dump(data, ofp)
@@ -627,7 +624,7 @@ examples:
         default=20,
         help="Results per page, 1-100 (default: 20)",
     )
-    _add_order_argument(parser)
+    add_order_argument(parser)
 
     pagination_group = parser.add_mutually_exclusive_group()
     pagination_group.add_argument(
