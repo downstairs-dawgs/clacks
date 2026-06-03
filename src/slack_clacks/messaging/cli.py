@@ -31,6 +31,43 @@ from slack_clacks.messaging.operations import (
 )
 
 
+def _sort_messages_by_ts(messages: list, order: str) -> list:
+    """Sort a list of Slack message dicts by their ``ts`` field.
+
+    Slack ``ts`` is a string of the form ``"<seconds>.<micros>"``. We parse
+    as ``float`` so the sort is canonical numeric ordering; messages
+    missing or unparseable ``ts`` sort as 0.0. Pagination and response
+    shape are untouched — only the local list order changes.
+    """
+    def _key(m: Any) -> float:
+        try:
+            return float(m.get("ts", 0))
+        except (TypeError, ValueError):
+            return 0.0
+
+    return sorted(messages, key=_key, reverse=(order == "desc"))
+
+
+def _add_order_argument(parser: argparse.ArgumentParser) -> None:
+    """Attach the shared ``--order {asc,desc}`` flag.
+
+    Default ``desc`` preserves Slack's native reverse-chronological return
+    order. ``asc`` re-sorts the returned messages locally before printing
+    — convenient for agentic loops that consume oldest-first.
+    """
+    parser.add_argument(
+        "--order",
+        type=str,
+        choices=("asc", "desc"),
+        default="desc",
+        help=(
+            "Order returned messages by timestamp. "
+            "'desc' (default) preserves Slack's newest-first order; "
+            "'asc' re-sorts locally to oldest-first before printing."
+        ),
+    )
+
+
 def _resolve_target_channel(
     client: Any,
     args: argparse.Namespace,
@@ -253,8 +290,12 @@ def handle_read(args: argparse.Namespace) -> None:
                 client, channel_id, limit=args.limit, latest=latest, oldest=oldest
             )
 
+        data = dict(response.data)
+        if isinstance(data.get("messages"), list):
+            data["messages"] = _sort_messages_by_ts(data["messages"], args.order)
+
         with args.outfile as ofp:
-            json.dump(response.data, ofp)
+            json.dump(data, ofp)
 
 
 def generate_read_parser() -> argparse.ArgumentParser:
@@ -339,6 +380,7 @@ def generate_read_parser() -> argparse.ArgumentParser:
         default=20,
         help="Max messages to retrieve (default: 20)",
     )
+    _add_order_argument(parser)
     parser.add_argument(
         "-o",
         "--outfile",
@@ -366,6 +408,7 @@ def handle_recent(args: argparse.Namespace) -> None:
         client = create_client(context.access_token, context.app_type)
 
         messages = get_recent_activity(client, message_limit=args.limit)
+        messages = _sort_messages_by_ts(messages, args.order)
 
         with args.outfile as ofp:
             json.dump(messages, ofp)
@@ -390,6 +433,7 @@ def generate_recent_parser() -> argparse.ArgumentParser:
         default=20,
         help="Max recent messages to retrieve (default: 20)",
     )
+    _add_order_argument(parser)
     parser.add_argument(
         "-o",
         "--outfile",
@@ -510,8 +554,20 @@ def handle_search(args: argparse.Namespace) -> None:
             cursor=args.cursor,
         )
 
+        # ``--order`` is a local post-fetch sort of the result list,
+        # independent of the upstream ``--sort``/``--sort-dir`` flags
+        # (which control the Slack search.messages API). Slack's response
+        # shape is ``{messages: {matches: [...], paging: {...}, ...}}``;
+        # we re-sort ``matches`` in place and leave pagination alone.
+        data = dict(response.data)
+        nested = data.get("messages")
+        if isinstance(nested, dict) and isinstance(nested.get("matches"), list):
+            nested = dict(nested)
+            nested["matches"] = _sort_messages_by_ts(nested["matches"], args.order)
+            data["messages"] = nested
+
         with args.outfile as ofp:
-            json.dump(response.data, ofp)
+            json.dump(data, ofp)
 
 
 def generate_search_parser() -> argparse.ArgumentParser:
@@ -571,6 +627,7 @@ examples:
         default=20,
         help="Results per page, 1-100 (default: 20)",
     )
+    _add_order_argument(parser)
 
     pagination_group = parser.add_mutually_exclusive_group()
     pagination_group.add_argument(
