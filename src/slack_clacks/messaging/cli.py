@@ -39,6 +39,7 @@ def sort_messages_by_ts(messages: list, order: str) -> list:
     missing or unparseable ``ts`` sort as 0.0. Pagination and response
     shape are untouched — only the local list order changes.
     """
+
     def _key(m: Any) -> float:
         try:
             return float(m.get("ts", 0))
