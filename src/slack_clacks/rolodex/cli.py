@@ -8,10 +8,11 @@ import sys
 from pathlib import Path
 
 from slack_clacks.auth.client import create_client
+from slack_clacks.configuration.cli import add_context_argument
 from slack_clacks.configuration.database import (
     ensure_db_updated,
-    get_current_context,
     get_session,
+    resolve_context,
 )
 from slack_clacks.rolodex.data import PLATFORM_TARGET_TYPES
 from slack_clacks.rolodex.operations import (
@@ -26,11 +27,7 @@ from slack_clacks.rolodex.operations import (
 def handle_add(args: argparse.Namespace) -> None:
     ensure_db_updated(config_dir=args.config_dir)
     with get_session(args.config_dir) as session:
-        context = get_current_context(session)
-        if context is None:
-            raise ValueError(
-                "No active authentication context. Authenticate with: clacks auth login"
-            )
+        context = resolve_context(session, args.context)
 
         alias_obj = add_alias(
             session,
@@ -56,11 +53,7 @@ def handle_add(args: argparse.Namespace) -> None:
 def handle_list(args: argparse.Namespace) -> None:
     ensure_db_updated(config_dir=args.config_dir)
     with get_session(args.config_dir) as session:
-        context = get_current_context(session)
-        if context is None:
-            raise ValueError(
-                "No active authentication context. Authenticate with: clacks auth login"
-            )
+        context = resolve_context(session, args.context)
 
         aliases = list_aliases(
             session,
@@ -91,11 +84,7 @@ def handle_list(args: argparse.Namespace) -> None:
 def handle_remove(args: argparse.Namespace) -> None:
     ensure_db_updated(config_dir=args.config_dir)
     with get_session(args.config_dir) as session:
-        context = get_current_context(session)
-        if context is None:
-            raise ValueError(
-                "No active authentication context. Authenticate with: clacks auth login"
-            )
+        context = resolve_context(session, args.context)
 
         removed = remove_alias(
             session,
@@ -116,11 +105,7 @@ def handle_remove(args: argparse.Namespace) -> None:
 def handle_sync(args: argparse.Namespace) -> None:
     ensure_db_updated(config_dir=args.config_dir)
     with get_session(args.config_dir) as session:
-        context = get_current_context(session)
-        if context is None:
-            raise ValueError(
-                "No active authentication context. Authenticate with: clacks auth login"
-            )
+        context = resolve_context(session, args.context)
 
         client = create_client(context.access_token, context.app_type)
         result = sync_from_slack(session, client, context.name)
@@ -165,6 +150,7 @@ def generate_cli() -> argparse.ArgumentParser:
         default=None,
         help="Configuration directory",
     )
+    add_context_argument(add_parser)
     add_parser.add_argument(
         "alias",
         type=str,
@@ -209,6 +195,7 @@ def generate_cli() -> argparse.ArgumentParser:
         default=None,
         help="Configuration directory",
     )
+    add_context_argument(list_parser)
     list_parser.add_argument(
         "-p",
         "--platform",
@@ -258,6 +245,7 @@ def generate_cli() -> argparse.ArgumentParser:
         default=None,
         help="Configuration directory",
     )
+    add_context_argument(remove_parser)
     remove_parser.add_argument(
         "alias",
         type=str,
@@ -288,6 +276,7 @@ def generate_cli() -> argparse.ArgumentParser:
         default=None,
         help="Configuration directory",
     )
+    add_context_argument(sync_parser)
     sync_parser.add_argument(
         "-o",
         "--outfile",

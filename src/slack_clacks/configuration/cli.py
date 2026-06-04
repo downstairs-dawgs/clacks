@@ -16,6 +16,24 @@ from slack_clacks.configuration.database import (
 )
 
 
+def add_context_argument(parser: argparse.ArgumentParser) -> None:
+    """Attach the shared ``-C/--context`` override flag.
+
+    When provided, the named context overrides the active context for this
+    single command invocation, without changing which context is active.
+    """
+    parser.add_argument(
+        "-C",
+        "--context",
+        type=str,
+        default=None,
+        help=(
+            "Context to act against, overriding the active context "
+            "for this command only"
+        ),
+    )
+
+
 def handle_init(args: argparse.Namespace) -> None:
     config_dir = args.config_dir
     ensure_db_updated(config_dir=config_dir)

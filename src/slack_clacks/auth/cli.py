@@ -6,6 +6,7 @@ from slack_clacks.auth.cert import generate_self_signed_cert, get_cert_info
 from slack_clacks.auth.constants import MODE_CLACKS, MODE_CLACKS_LITE, MODE_COOKIE
 from slack_clacks.auth.cookie import authenticate_with_cookie
 from slack_clacks.auth.oauth import start_oauth_flow
+from slack_clacks.configuration.cli import add_context_argument
 from slack_clacks.configuration.database import (
     add_context,
     delete_context,
@@ -13,6 +14,7 @@ from slack_clacks.configuration.database import (
     get_context,
     get_current_context,
     get_session,
+    resolve_context,
     set_current_context,
     update_context,
 )
@@ -122,11 +124,7 @@ def handle_status(args: argparse.Namespace) -> None:
 
     ensure_db_updated(config_dir=args.config_dir)
     with get_session(args.config_dir) as session:
-        context = get_current_context(session)
-        if context is None:
-            raise ValueError(
-                "No active authentication context. Authenticate with: clacks auth login"
-            )
+        context = resolve_context(session, args.context)
 
         client = create_client(context.access_token, context.app_type)
 
@@ -305,6 +303,7 @@ def generate_cli() -> argparse.ArgumentParser:
         default=None,
         help="Configuration directory (default: platform-specific user config dir)",
     )
+    add_context_argument(status_parser)
     status_parser.add_argument(
         "-o",
         "--outfile",

@@ -6,10 +6,11 @@ from typing import Any
 
 from slack_clacks.auth.client import create_client
 from slack_clacks.auth.validation import get_scopes_for_mode, validate
+from slack_clacks.configuration.cli import add_context_argument
 from slack_clacks.configuration.database import (
     ensure_db_updated,
-    get_current_context,
     get_session,
+    resolve_context,
 )
 from slack_clacks.constants import SLACK_TS_EPSILON
 from slack_clacks.messaging.operations import (
@@ -90,11 +91,7 @@ def _resolve_target_channel(
 def handle_send(args: argparse.Namespace) -> None:
     ensure_db_updated(config_dir=args.config_dir)
     with get_session(args.config_dir) as session:
-        context = get_current_context(session)
-        if context is None:
-            raise ValueError(
-                "No active authentication context. Authenticate with: clacks auth login"
-            )
+        context = resolve_context(session, args.context)
 
         client = create_client(context.access_token, context.app_type)
         channel_id = _resolve_target_channel(client, args, session, context.name)
@@ -116,6 +113,7 @@ def generate_send_parser() -> argparse.ArgumentParser:
         type=str,
         help="Configuration directory (default: platform-specific user config dir)",
     )
+    add_context_argument(parser)
     parser.add_argument(
         "-c",
         "--channel",
@@ -156,11 +154,7 @@ def generate_send_parser() -> argparse.ArgumentParser:
 def handle_schedule(args: argparse.Namespace) -> None:
     ensure_db_updated(config_dir=args.config_dir)
     with get_session(args.config_dir) as session:
-        context = get_current_context(session)
-        if context is None:
-            raise ValueError(
-                "No active authentication context. Authenticate with: clacks auth login"
-            )
+        context = resolve_context(session, args.context)
 
         client = create_client(context.access_token, context.app_type)
         channel_id = _resolve_target_channel(client, args, session, context.name)
@@ -185,6 +179,7 @@ def generate_schedule_parser() -> argparse.ArgumentParser:
         type=str,
         help="Configuration directory (default: platform-specific user config dir)",
     )
+    add_context_argument(parser)
     parser.add_argument(
         "-c",
         "--channel",
@@ -235,11 +230,7 @@ def generate_schedule_parser() -> argparse.ArgumentParser:
 def handle_read(args: argparse.Namespace) -> None:
     ensure_db_updated(config_dir=args.config_dir)
     with get_session(args.config_dir) as session:
-        context = get_current_context(session)
-        if context is None:
-            raise ValueError(
-                "No active authentication context. Authenticate with: clacks auth login"
-            )
+        context = resolve_context(session, args.context)
 
         client = create_client(context.access_token, context.app_type)
 
@@ -310,6 +301,7 @@ def generate_read_parser() -> argparse.ArgumentParser:
         type=str,
         help="Configuration directory (default: platform-specific user config dir)",
     )
+    add_context_argument(parser)
     parser.add_argument(
         "-c",
         "--channel",
@@ -396,11 +388,7 @@ def generate_read_parser() -> argparse.ArgumentParser:
 def handle_recent(args: argparse.Namespace) -> None:
     ensure_db_updated(config_dir=args.config_dir)
     with get_session(args.config_dir) as session:
-        context = get_current_context(session)
-        if context is None:
-            raise ValueError(
-                "No active authentication context. Authenticate with: clacks auth login"
-            )
+        context = resolve_context(session, args.context)
 
         scopes = get_scopes_for_mode(context.app_type)
         validate("channels:history", scopes, raise_on_error=True)
@@ -426,6 +414,7 @@ def generate_recent_parser() -> argparse.ArgumentParser:
         type=str,
         help="Configuration directory (default: platform-specific user config dir)",
     )
+    add_context_argument(parser)
     parser.add_argument(
         "-l",
         "--limit",
@@ -449,11 +438,7 @@ def generate_recent_parser() -> argparse.ArgumentParser:
 def handle_react(args: argparse.Namespace) -> None:
     ensure_db_updated(config_dir=args.config_dir)
     with get_session(args.config_dir) as session:
-        context = get_current_context(session)
-        if context is None:
-            raise ValueError(
-                "No active authentication context. Authenticate with: clacks auth login"
-            )
+        context = resolve_context(session, args.context)
 
         client = create_client(context.access_token, context.app_type)
         channel_id = _resolve_target_channel(client, args, session, context.name)
@@ -480,6 +465,7 @@ def generate_react_parser() -> argparse.ArgumentParser:
         type=str,
         help="Configuration directory (default: platform-specific user config dir)",
     )
+    add_context_argument(parser)
 
     target_group = parser.add_mutually_exclusive_group(required=True)
     target_group.add_argument(
@@ -528,11 +514,7 @@ def generate_react_parser() -> argparse.ArgumentParser:
 def handle_search(args: argparse.Namespace) -> None:
     ensure_db_updated(config_dir=args.config_dir)
     with get_session(args.config_dir) as session:
-        context = get_current_context(session)
-        if context is None:
-            raise ValueError(
-                "No active authentication context. Authenticate with: clacks auth login"
-            )
+        context = resolve_context(session, args.context)
 
         scopes = get_scopes_for_mode(context.app_type)
         validate("search:read", scopes, raise_on_error=True)
@@ -591,6 +573,7 @@ examples:
         type=str,
         help="Configuration directory (default: platform-specific user config dir)",
     )
+    add_context_argument(parser)
     parser.add_argument(
         "-q",
         "--query",
@@ -654,11 +637,7 @@ examples:
 def handle_delete(args: argparse.Namespace) -> None:
     ensure_db_updated(config_dir=args.config_dir)
     with get_session(args.config_dir) as session:
-        context = get_current_context(session)
-        if context is None:
-            raise ValueError(
-                "No active authentication context. Authenticate with: clacks auth login"
-            )
+        context = resolve_context(session, args.context)
 
         client = create_client(context.access_token, context.app_type)
         channel_id = _resolve_target_channel(client, args, session, context.name)
@@ -684,6 +663,7 @@ def generate_delete_parser() -> argparse.ArgumentParser:
         type=str,
         help="Configuration directory (default: platform-specific user config dir)",
     )
+    add_context_argument(parser)
 
     target_group = parser.add_mutually_exclusive_group(required=True)
     target_group.add_argument(
