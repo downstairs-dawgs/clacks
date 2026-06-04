@@ -7,10 +7,11 @@ import sys
 
 from slack_clacks.auth.client import create_client
 from slack_clacks.auth.validation import get_scopes_for_mode, validate
+from slack_clacks.configuration.cli import add_context_argument
 from slack_clacks.configuration.database import (
     ensure_db_updated,
-    get_current_context,
     get_session,
+    resolve_context,
 )
 from slack_clacks.messaging.operations import (
     open_dm_channel,
@@ -48,11 +49,7 @@ def _copy_to_clipboard(text: str) -> None:
 def handle_upload(args: argparse.Namespace) -> None:
     ensure_db_updated(config_dir=args.config_dir)
     with get_session(args.config_dir) as session:
-        context = get_current_context(session)
-        if context is None:
-            raise ValueError(
-                "No active authentication context. Authenticate with: clacks auth login"
-            )
+        context = resolve_context(session, args.context)
 
         scopes = get_scopes_for_mode(context.app_type)
         validate("files:write", scopes, raise_on_error=True)
@@ -143,6 +140,7 @@ def generate_upload_parser() -> argparse.ArgumentParser:
         type=str,
         help="Configuration directory (default: platform-specific user config dir)",
     )
+    add_context_argument(parser)
 
     target_group = parser.add_mutually_exclusive_group()
     target_group.add_argument(

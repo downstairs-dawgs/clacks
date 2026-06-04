@@ -10,10 +10,11 @@ from typing import cast
 
 from slack_clacks.auth.client import create_client
 from slack_clacks.auth.validation import get_scopes_for_mode, validate
+from slack_clacks.configuration.cli import add_context_argument
 from slack_clacks.configuration.database import (
     ensure_db_updated,
-    get_current_context,
     get_session,
+    resolve_context,
 )
 from slack_clacks.files.operations import (
     download_file_to_path,
@@ -29,11 +30,7 @@ from slack_clacks.upload.cli import generate_upload_parser
 def handle_download(args: argparse.Namespace) -> None:
     ensure_db_updated(config_dir=args.config_dir)
     with get_session(args.config_dir) as session:
-        context = get_current_context(session)
-        if context is None:
-            raise ValueError(
-                "No active authentication context. Authenticate with: clacks auth login"
-            )
+        context = resolve_context(session, args.context)
 
         scopes = get_scopes_for_mode(context.app_type)
         validate("files:read", scopes, raise_on_error=True)
@@ -86,11 +83,7 @@ def handle_download(args: argparse.Namespace) -> None:
 def handle_list(args: argparse.Namespace) -> None:
     ensure_db_updated(config_dir=args.config_dir)
     with get_session(args.config_dir) as session:
-        context = get_current_context(session)
-        if context is None:
-            raise ValueError(
-                "No active authentication context. Authenticate with: clacks auth login"
-            )
+        context = resolve_context(session, args.context)
 
         scopes = get_scopes_for_mode(context.app_type)
         validate("files:read", scopes, raise_on_error=True)
@@ -115,11 +108,7 @@ def handle_list(args: argparse.Namespace) -> None:
 def handle_info(args: argparse.Namespace) -> None:
     ensure_db_updated(config_dir=args.config_dir)
     with get_session(args.config_dir) as session:
-        context = get_current_context(session)
-        if context is None:
-            raise ValueError(
-                "No active authentication context. Authenticate with: clacks auth login"
-            )
+        context = resolve_context(session, args.context)
 
         scopes = get_scopes_for_mode(context.app_type)
         validate("files:read", scopes, raise_on_error=True)
@@ -147,6 +136,7 @@ def generate_files_cli() -> argparse.ArgumentParser:
         default=None,
         help="Configuration directory",
     )
+    add_context_argument(dl_parser)
     id_group = dl_parser.add_mutually_exclusive_group(required=True)
     id_group.add_argument(
         "-i",
@@ -182,6 +172,7 @@ def generate_files_cli() -> argparse.ArgumentParser:
         default=None,
         help="Configuration directory",
     )
+    add_context_argument(list_parser)
     list_parser.add_argument(
         "-c",
         "--channel",
@@ -219,6 +210,7 @@ def generate_files_cli() -> argparse.ArgumentParser:
         default=None,
         help="Configuration directory",
     )
+    add_context_argument(info_parser)
     info_parser.add_argument(
         "-i",
         "--file-id",

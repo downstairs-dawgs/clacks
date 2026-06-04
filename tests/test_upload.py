@@ -72,7 +72,7 @@ class TestHandleUploadWithFile(unittest.TestCase):
         mock_get_session.return_value.__exit__ = MagicMock(return_value=False)
 
         ctx_patch = patch(
-            "slack_clacks.upload.cli.get_current_context",
+            "slack_clacks.upload.cli.resolve_context",
             return_value=mock_context,
         )
         with ctx_patch:
@@ -85,6 +85,7 @@ class TestHandleUploadWithFile(unittest.TestCase):
             outfile = io.StringIO()
             args = argparse.Namespace(
                 config_dir=None,
+                context=None,
                 channel="general",
                 user=None,
                 file="/tmp/test.py",
@@ -134,7 +135,7 @@ class TestHandleUploadWithStdin(unittest.TestCase):
         mock_get_session.return_value.__exit__ = MagicMock(return_value=False)
 
         ctx_patch = patch(
-            "slack_clacks.upload.cli.get_current_context",
+            "slack_clacks.upload.cli.resolve_context",
             return_value=mock_context,
         )
         with ctx_patch:
@@ -147,6 +148,7 @@ class TestHandleUploadWithStdin(unittest.TestCase):
             outfile = io.StringIO()
             args = argparse.Namespace(
                 config_dir=None,
+                context=None,
                 channel="ops",
                 user=None,
                 file=None,
@@ -187,12 +189,13 @@ class TestHandleUploadScopeValidation(unittest.TestCase):
         mock_get_session.return_value.__exit__ = MagicMock(return_value=False)
 
         ctx_patch = patch(
-            "slack_clacks.upload.cli.get_current_context",
+            "slack_clacks.upload.cli.resolve_context",
             return_value=mock_context,
         )
         with ctx_patch:
             args = argparse.Namespace(
                 config_dir=None,
+                context=None,
                 channel="general",
                 user=None,
                 file="/tmp/test.py",
@@ -230,7 +233,7 @@ class TestHandleUploadDefaultFilename(unittest.TestCase):
         mock_get_session.return_value.__exit__ = MagicMock(return_value=False)
 
         ctx_patch = patch(
-            "slack_clacks.upload.cli.get_current_context",
+            "slack_clacks.upload.cli.resolve_context",
             return_value=mock_context,
         )
         with ctx_patch:
@@ -239,6 +242,7 @@ class TestHandleUploadDefaultFilename(unittest.TestCase):
             outfile = io.StringIO()
             args = argparse.Namespace(
                 config_dir=None,
+                context=None,
                 channel=None,
                 user=None,
                 file=None,

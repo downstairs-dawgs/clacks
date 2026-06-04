@@ -65,11 +65,12 @@ class TestHandleDownloadScopeValidation(unittest.TestCase):
         mock_get_session.return_value.__exit__ = MagicMock(return_value=False)
 
         with patch(
-            "slack_clacks.files.cli.get_current_context",
+            "slack_clacks.files.cli.resolve_context",
             return_value=mock_context,
         ):
             args = argparse.Namespace(
                 config_dir=None,
+                context=None,
                 file_id="F123",
                 permalink=None,
                 write=None,
@@ -103,11 +104,12 @@ class TestHandleInfo(unittest.TestCase):
         }
 
         with patch(
-            "slack_clacks.files.cli.get_current_context",
+            "slack_clacks.files.cli.resolve_context",
             return_value=mock_context,
         ):
             args = argparse.Namespace(
                 config_dir=None,
+                context=None,
                 file_id="F123",
             )
 
@@ -143,11 +145,12 @@ class TestHandleList(unittest.TestCase):
         }
 
         with patch(
-            "slack_clacks.files.cli.get_current_context",
+            "slack_clacks.files.cli.resolve_context",
             return_value=mock_context,
         ):
             args = argparse.Namespace(
                 config_dir=None,
+                context=None,
                 channel=None,
                 user=None,
                 limit=20,
@@ -198,11 +201,12 @@ class TestHandleList(unittest.TestCase):
         mock_list_files.return_value = {"ok": True, "files": []}
 
         with patch(
-            "slack_clacks.files.cli.get_current_context",
+            "slack_clacks.files.cli.resolve_context",
             return_value=mock_context,
         ):
             args = argparse.Namespace(
                 config_dir=None,
+                context=None,
                 channel="general",
                 user="@alice",
                 limit=5,

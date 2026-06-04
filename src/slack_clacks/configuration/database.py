@@ -163,6 +163,31 @@ def get_current_context(session: Session) -> Context | None:
     return get_context(session, current_entry.context_name)
 
 
+def resolve_context(session: Session, name: str | None = None) -> Context:
+    """Resolve the context a command should operate against.
+
+    If ``name`` is provided (e.g. from a ``--context`` override), that named
+    context is used instead of the active one; it must exist. Otherwise the
+    current active context is used. Raises ``ValueError`` when no usable
+    context can be found.
+    """
+    if name is not None:
+        context = get_context(session, name)
+        if context is None:
+            raise ValueError(
+                f"Context '{name}' does not exist. "
+                "List contexts with: clacks config contexts"
+            )
+        return context
+
+    context = get_current_context(session)
+    if context is None:
+        raise ValueError(
+            "No active authentication context. Authenticate with: clacks auth login"
+        )
+    return context
+
+
 def delete_context(session: Session, name: str) -> None:
     """Delete a context from the database."""
     context = get_context(session, name)
