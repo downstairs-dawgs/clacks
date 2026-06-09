@@ -53,9 +53,12 @@ def sort_messages_by_ts(messages: list, order: str) -> list:
 def add_order_argument(parser: argparse.ArgumentParser) -> None:
     """Attach the shared ``--order {asc,desc}`` flag.
 
-    Default ``desc`` preserves Slack's native reverse-chronological return
-    order. ``asc`` re-sorts the returned messages locally before printing
-    — convenient for agentic loops that consume oldest-first.
+    The flag re-sorts the fetched messages by timestamp before printing.
+    It is client-side and display-only: it does not change which messages
+    Slack returns, and it orders only the output of a single invocation
+    (separate pages or invocations are not merged). ``desc`` (default) is
+    newest-first; ``asc`` is oldest-first — convenient for agentic loops
+    that consume oldest-first.
     """
     parser.add_argument(
         "--order",
@@ -63,9 +66,11 @@ def add_order_argument(parser: argparse.ArgumentParser) -> None:
         choices=("asc", "desc"),
         default="desc",
         help=(
-            "Order returned messages by timestamp. "
-            "'desc' (default) preserves Slack's newest-first order; "
-            "'asc' re-sorts locally to oldest-first before printing."
+            "Re-sort the fetched messages by timestamp before printing. "
+            "Client-side only: does not change which messages Slack "
+            "returns, and orders only this command's output (separate "
+            "pages are not merged). 'desc' (default) is newest-first; "
+            "'asc' is oldest-first."
         ),
     )
 
@@ -623,14 +628,18 @@ examples:
         type=str,
         choices=["timestamp", "score"],
         default="timestamp",
-        help="Sort results by timestamp or relevance score (default: timestamp)",
+        help=(
+            "Slack-side ranking: timestamp or relevance score (default: "
+            "timestamp). Chooses which results each page contains; "
+            "printed order is still controlled by --order."
+        ),
     )
     parser.add_argument(
         "--sort-dir",
         type=str,
         choices=["asc", "desc"],
         default="desc",
-        help="Sort direction (default: desc)",
+        help="Slack-side sort direction (default: desc)",
     )
     parser.add_argument(
         "-l",

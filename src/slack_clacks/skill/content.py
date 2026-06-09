@@ -153,8 +153,9 @@ Supported query filters (included in the `-q` string):
 - `-word` - exclude messages containing a word
 
 Options:
-- `-s, --sort` - Sort by `timestamp` (default) or `score` (relevance)
-- `--sort-dir` - Sort direction: `asc` or `desc` (default)
+- `-s, --sort` - Sort by `timestamp` (default) or `score` (relevance) (Slack-side)
+- `--sort-dir` - Sort direction: `asc` or `desc` (default) (Slack-side)
+- `--order` - Re-sort output client-side: `asc` or `desc` (default)
 - `-l, --limit` - Results per page, 1-100 (default: 20)
 - `--page` / `--cursor` - Pagination (mutually exclusive)
 
