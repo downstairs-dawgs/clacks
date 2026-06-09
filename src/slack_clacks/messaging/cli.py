@@ -295,7 +295,7 @@ def handle_read(args: argparse.Namespace) -> None:
             json.dump(data, ofp)
 
 
-def _nonempty_cursor(value: str) -> str:
+def assert_cursor_nonempty(value: str) -> str:
     """Reject empty/whitespace cursors at parse time.
 
     Slack signals the last page with an empty ``next_cursor``; passing that
@@ -395,7 +395,7 @@ def generate_read_parser() -> argparse.ArgumentParser:
     )
     message_or_cursor.add_argument(
         "--cursor",
-        type=_nonempty_cursor,
+        type=assert_cursor_nonempty,
         default=None,
         help=(
             "Pagination cursor from a previous response's "
