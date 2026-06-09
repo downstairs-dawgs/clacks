@@ -25,20 +25,29 @@ def call_with_backoff(
     base_delay: float = 1.0,
     **kwargs: Any,
 ) -> Any:
-    """Call a Slack API function with exponential backoff on rate limit."""
+    """Call a Slack API function with exponential backoff on rate limit.
+
+    Rate limits are detected via ``ClacksRateLimited.from_slack_error``, so
+    both typed ClacksRateLimited errors and raw SlackApiError 429s (whatever
+    their payload shape) are retried; the response is never dereferenced
+    directly. The Retry-After hint is used as the delay when available,
+    falling back to exponential backoff otherwise. Non-rate-limit errors and
+    the final rate-limited attempt re-raise.
+    """
     for attempt in range(max_retries):
         try:
             return func(**kwargs)
         except SlackApiError as e:
-            if e.response.get("error") == "ratelimited":
-                if attempt == max_retries - 1:
-                    raise
-                # Get retry-after header or use exponential backoff
-                retry_after = int(e.response.headers.get("Retry-After", 0))
-                delay = max(retry_after, base_delay * (2**attempt))
-                time.sleep(delay)
-            else:
+            rate_limited = ClacksRateLimited.from_slack_error(e)
+            if rate_limited is None:
                 raise
+            if attempt == max_retries - 1:
+                raise
+            if rate_limited.retry_after is not None:
+                delay = float(rate_limited.retry_after)
+            else:
+                delay = base_delay * (2**attempt)
+            time.sleep(delay)
     return None  # Should never reach here
 
 

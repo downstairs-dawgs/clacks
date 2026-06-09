@@ -1,5 +1,6 @@
 """
-Helper functions for creating properly configured Slack WebClients.
+Slack WebClient setup for clacks: the rate-limit-aware ClacksWebClient class
+and a factory for creating properly configured instances.
 """
 
 from typing import Any
@@ -15,9 +16,13 @@ from slack_clacks.exceptions import ClacksRateLimited
 class ClacksWebClient(WebClient):
     """WebClient that raises ClacksRateLimited on Slack rate limits.
 
-    Every SDK method helper funnels through ``api_call``, so translating here
-    makes rate limits surface as ClacksRateLimited (a SlackApiError subclass)
-    from any API call, with the Retry-After hint attached.
+    SDK method helpers funnel through ``api_call``, so translating here makes
+    rate limits surface as ClacksRateLimited (a SlackApiError subclass) from
+    API calls, with the Retry-After hint attached. Two paths bypass this:
+    SlackResponse cursor-iteration pagination raises raw SlackApiError (clacks
+    never iterates responses, and main()'s seam still converts those), and
+    ``files_upload_v2``'s file-bytes upload leg raises SlackRequestError,
+    outside the SlackApiError domain entirely.
     """
 
     def api_call(self, *args: Any, **kwargs: Any) -> SlackResponse:
@@ -30,7 +35,7 @@ class ClacksWebClient(WebClient):
             raise
 
 
-def create_client(access_token: str, app_type: str) -> WebClient:
+def create_client(access_token: str, app_type: str) -> ClacksWebClient:
     """
     Create a WebClient configured for the given app type.
 

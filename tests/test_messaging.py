@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 from slack_sdk.errors import SlackApiError
 from slack_sdk.web.slack_response import SlackResponse
 
+from slack_clacks.exceptions import ClacksRateLimited
 from slack_clacks.messaging.operations import (
     call_with_backoff,
     open_dm_channel,
@@ -410,6 +411,60 @@ def rate_limited_slack_error(api_url: str) -> SlackApiError:
         status_code=429,
     )
     return SlackApiError("The request to the Slack API failed.", response)
+
+
+class TestCallWithBackoffTypedRateLimit(unittest.TestCase):
+    @patch("slack_clacks.messaging.operations.time.sleep")
+    def test_typed_rate_limit_retries_then_succeeds(self, mock_sleep):
+        """A ClacksRateLimited from a real 429 is retried like a raw error."""
+        error = ClacksRateLimited.from_slack_error(
+            rate_limited_slack_error("https://slack.com/api/conversations.history")
+        )
+        self.assertIsNotNone(error)
+
+        call_count = 0
+
+        def mock_func(**kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count < 3:
+                raise error
+            return {"messages": []}
+
+        result = call_with_backoff(mock_func, max_retries=5, base_delay=0.01)
+        self.assertEqual(call_count, 3)
+        self.assertEqual(result, {"messages": []})
+
+    @patch("slack_clacks.messaging.operations.time.sleep")
+    def test_typed_rate_limit_raises_after_max_retries(self, mock_sleep):
+        """The typed exception propagates once retries are exhausted."""
+        error = ClacksRateLimited.from_slack_error(
+            rate_limited_slack_error("https://slack.com/api/conversations.history")
+        )
+        self.assertIsNotNone(error)
+
+        def mock_func(**kwargs):
+            raise error
+
+        with self.assertRaises(ClacksRateLimited) as ctx:
+            call_with_backoff(mock_func, max_retries=2, base_delay=0.01)
+
+        self.assertIs(ctx.exception, error)
+
+
+class TestResolveChannelIdTypedRateLimit(unittest.TestCase):
+    def test_typed_rate_limit_propagates(self):
+        """A ClacksRateLimited from the client (production path) propagates."""
+        error = ClacksRateLimited.from_slack_error(
+            rate_limited_slack_error("https://slack.com/api/conversations.list")
+        )
+        client = MagicMock()
+        client.conversations_list.side_effect = error
+
+        with self.assertRaises(ClacksRateLimited) as ctx:
+            resolve_channel_id(client, "general")
+
+        self.assertIs(ctx.exception, error)
 
 
 class TestResolveUserIdRateLimit(unittest.TestCase):
