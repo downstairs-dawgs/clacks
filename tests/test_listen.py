@@ -280,7 +280,7 @@ class TestRateLimitHandling(unittest.TestCase):
         """Should retry with backoff when rate limited."""
         from slack_sdk.errors import SlackApiError
 
-        from slack_clacks.listen.operations import _call_with_backoff
+        from slack_clacks.messaging.operations import call_with_backoff
 
         mock_response = MagicMock()
         mock_response.get.return_value = "ratelimited"
@@ -295,7 +295,7 @@ class TestRateLimitHandling(unittest.TestCase):
                 raise SlackApiError("rate limited", mock_response)
             return {"messages": []}
 
-        result = _call_with_backoff(mock_func, max_retries=5, base_delay=0.01)
+        result = call_with_backoff(mock_func, max_retries=5, base_delay=0.01)
         self.assertEqual(call_count, 3)
         self.assertEqual(result, {"messages": []})
 
@@ -303,7 +303,7 @@ class TestRateLimitHandling(unittest.TestCase):
         """Should raise after max retries exhausted."""
         from slack_sdk.errors import SlackApiError
 
-        from slack_clacks.listen.operations import _call_with_backoff
+        from slack_clacks.messaging.operations import call_with_backoff
 
         mock_response = MagicMock()
         mock_response.get.return_value = "ratelimited"
@@ -313,7 +313,7 @@ class TestRateLimitHandling(unittest.TestCase):
             raise SlackApiError("rate limited", mock_response)
 
         with self.assertRaises(SlackApiError):
-            _call_with_backoff(mock_func, max_retries=2, base_delay=0.01)
+            call_with_backoff(mock_func, max_retries=2, base_delay=0.01)
 
 
 if __name__ == "__main__":

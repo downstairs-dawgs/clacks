@@ -1,5 +1,7 @@
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
+
+from slack_sdk.errors import SlackApiError
 
 from slack_clacks.messaging.operations import get_recent_activity
 
@@ -37,6 +39,11 @@ class TestGetRecentActivity(unittest.TestCase):
             for call in self.client.users_conversations.call_args_list
         ]
         self.assertEqual(cursors, [None, "cursor-2"])
+        for call in self.client.users_conversations.call_args_list:
+            self.assertEqual(call.kwargs["limit"], 200)
+            self.assertEqual(
+                call.kwargs["types"], "public_channel,private_channel,mpim,im"
+            )
 
     def test_terminates_when_response_metadata_missing(self):
         """A response without response_metadata ends the loop after one page."""
@@ -51,6 +58,25 @@ class TestGetRecentActivity(unittest.TestCase):
 
         self.assertEqual([m["channel_id"] for m in messages], ["C1"])
         self.assertEqual(self.client.users_conversations.call_count, 1)
+
+    def test_rate_limited_history_is_retried(self):
+        """A ratelimited conversations_history call is retried, not skipped."""
+        self.client.users_conversations.side_effect = [
+            {"channels": [{"id": "C1", "name": "one"}]},
+        ]
+        rate_limit_response = MagicMock()
+        rate_limit_response.get.return_value = "ratelimited"
+        rate_limit_response.headers = {"Retry-After": "0"}
+        self.client.conversations_history.side_effect = [
+            SlackApiError("rate limited", rate_limit_response),
+            {"messages": [{"ts": "100.000001", "text": "hi"}]},
+        ]
+
+        with patch("slack_clacks.messaging.operations.time.sleep"):
+            messages = get_recent_activity(self.client)
+
+        self.assertEqual([m["channel_id"] for m in messages], ["C1"])
+        self.assertEqual(self.client.conversations_history.call_count, 2)
 
 
 if __name__ == "__main__":

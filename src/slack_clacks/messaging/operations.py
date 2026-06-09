@@ -18,6 +18,29 @@ from slack_clacks.messaging.exceptions import (
 )
 
 
+def call_with_backoff(
+    func: Any,
+    max_retries: int = 5,
+    base_delay: float = 1.0,
+    **kwargs: Any,
+) -> Any:
+    """Call a Slack API function with exponential backoff on rate limit."""
+    for attempt in range(max_retries):
+        try:
+            return func(**kwargs)
+        except SlackApiError as e:
+            if e.response.get("error") == "ratelimited":
+                if attempt == max_retries - 1:
+                    raise
+                # Get retry-after header or use exponential backoff
+                retry_after = int(e.response.headers.get("Retry-After", 0))
+                delay = max(retry_after, base_delay * (2**attempt))
+                time.sleep(delay)
+            else:
+                raise
+    return None  # Should never reach here
+
+
 def resolve_channel_id(
     client: WebClient,
     channel_identifier: str,
@@ -285,26 +308,30 @@ def read_thread(
 
 
 def get_recent_activity(
-    client: WebClient, conversation_limit: int = 200, message_limit: int = 20
+    client: WebClient, conversations_page_size: int = 200, message_limit: int = 20
 ):
     """
     Get recent messages across all user's conversations.
     Returns a list of messages with their conversation context, sorted by timestamp.
 
-    ``conversation_limit`` is the per-page size for ``users_conversations``;
-    pages are followed via ``response_metadata.next_cursor`` until exhausted,
-    so every conversation is enumerated regardless of how many there are.
-    Slack caps pages at 200 on standard tiers (hence the default), so the
-    value only affects request count, never completeness. There is
-    deliberately no total cap: one would silently drop conversations, which
-    is exactly the bug this pagination exists to fix.
+    Every conversation is enumerated via ``users_conversations`` cursor
+    pagination, with ``conversations_page_size`` as the per-page size. Slack
+    recommends pages of at most 200 (hence the default); the loop runs until
+    next_cursor is exhausted, so the value affects request count, not
+    completeness.
+
+    The function then makes one ``conversations_history`` call per
+    conversation, so runtime scales with the number of conversations.
+    Rate-limited history calls are retried with backoff, but calls that
+    ultimately fail (including persistent rate limiting after retries) are
+    skipped, so the output can omit conversations.
     """
     channels = []
     cursor: str | None = None
     while True:
         response = client.users_conversations(
             types="public_channel,private_channel,mpim,im",
-            limit=conversation_limit,
+            limit=conversations_page_size,
             cursor=cursor,
         )
         channels.extend(response["channels"])
@@ -316,8 +343,10 @@ def get_recent_activity(
     all_messages = []
     for channel in channels:
         try:
-            history_response = client.conversations_history(
-                channel=channel["id"], limit=1
+            history_response = call_with_backoff(
+                client.conversations_history,
+                channel=channel["id"],
+                limit=1,
             )
             if history_response["messages"]:
                 for message in history_response["messages"]:
