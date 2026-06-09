@@ -143,7 +143,8 @@ def handle_delete(args: argparse.Namespace) -> None:
 
 def generate_files_cli() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Upload, download, list, inspect, and delete files"
+        prog="clacks files",
+        description="Upload, download, list, inspect, and delete files",
     )
     parser.set_defaults(func=lambda _: parser.print_help())
 

@@ -230,7 +230,10 @@ Private upload (returns permalink, not shared to any channel):
 echo "print('hello')" | uvx --from slack-clacks clacks files upload -t python
 ```
 
-Delete a file (your own files only):
+## Deleting Files
+
+Delete a file (your own files only). Note: deleting a message does NOT delete
+its attached file — the file persists in workspace storage until deleted here:
 ```bash
 uvx --from slack-clacks clacks files delete -i F2147483862
 ```
