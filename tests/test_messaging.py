@@ -1,9 +1,12 @@
 import unittest
 from datetime import datetime as real_datetime
 from datetime import timedelta, timezone
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
+
+from slack_sdk.errors import SlackApiError
 
 from slack_clacks.messaging.operations import (
+    call_with_backoff,
     parse_schedule_time,
     parse_timestamp,
     resolve_message_timestamp,
@@ -333,6 +336,39 @@ class TestParseScheduleTime(unittest.TestCase):
         with self.assertRaises(ValueError) as ctx:
             parse_schedule_time("next tuesday")
         self.assertIn("Unrecognized", str(ctx.exception))
+
+
+class TestCallWithBackoff(unittest.TestCase):
+    def test_retries_on_rate_limit(self):
+        """Should retry with backoff when rate limited."""
+        mock_response = MagicMock()
+        mock_response.get.return_value = "ratelimited"
+        mock_response.headers = {"Retry-After": "0"}
+
+        call_count = 0
+
+        def mock_func(**kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count < 3:
+                raise SlackApiError("rate limited", mock_response)
+            return {"messages": []}
+
+        result = call_with_backoff(mock_func, max_retries=5, base_delay=0.01)
+        self.assertEqual(call_count, 3)
+        self.assertEqual(result, {"messages": []})
+
+    def test_raises_after_max_retries(self):
+        """Should raise after max retries exhausted."""
+        mock_response = MagicMock()
+        mock_response.get.return_value = "ratelimited"
+        mock_response.headers = {"Retry-After": "0"}
+
+        def mock_func(**kwargs):
+            raise SlackApiError("rate limited", mock_response)
+
+        with self.assertRaises(SlackApiError):
+            call_with_backoff(mock_func, max_retries=2, base_delay=0.01)
 
 
 if __name__ == "__main__":
