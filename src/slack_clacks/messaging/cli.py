@@ -440,7 +440,11 @@ def handle_recent(args: argparse.Namespace) -> None:
 
 def generate_recent_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Show recent messages across all conversations",
+        description=(
+            "Show recent messages across all conversations "
+            "(makes one history request per conversation; "
+            "conversations whose fetch fails are skipped)"
+        ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 

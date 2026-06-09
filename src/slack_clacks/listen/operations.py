@@ -9,32 +9,9 @@ from decimal import Decimal
 from typing import Any
 
 from slack_sdk import WebClient
-from slack_sdk.errors import SlackApiError
 
 from slack_clacks.constants import SLACK_TS_EPSILON
-
-
-def _call_with_backoff(
-    func: Any,
-    max_retries: int = 5,
-    base_delay: float = 1.0,
-    **kwargs: Any,
-) -> Any:
-    """Call a Slack API function with exponential backoff on rate limit."""
-    for attempt in range(max_retries):
-        try:
-            return func(**kwargs)
-        except SlackApiError as e:
-            if e.response.get("error") == "ratelimited":
-                if attempt == max_retries - 1:
-                    raise
-                # Get retry-after header or use exponential backoff
-                retry_after = int(e.response.headers.get("Retry-After", 0))
-                delay = max(retry_after, base_delay * (2**attempt))
-                time.sleep(delay)
-            else:
-                raise
-    return None  # Should never reach here
+from slack_clacks.messaging.operations import call_with_backoff
 
 
 def listen_channel(
@@ -69,7 +46,7 @@ def listen_channel(
     if include_history > 0:
         messages: list[Any]
         if thread_ts:
-            response = _call_with_backoff(
+            response = call_with_backoff(
                 client.conversations_replies,
                 channel=channel_id,
                 ts=thread_ts,
@@ -82,7 +59,7 @@ def listen_channel(
             else:
                 messages = []
         else:
-            response = _call_with_backoff(
+            response = call_with_backoff(
                 client.conversations_history,
                 channel=channel_id,
                 limit=include_history,
@@ -117,7 +94,7 @@ def listen_channel(
         exclusive_oldest = str(Decimal(latest_ts) + SLACK_TS_EPSILON)
 
         if thread_ts:
-            response = _call_with_backoff(
+            response = call_with_backoff(
                 client.conversations_replies,
                 channel=channel_id,
                 ts=thread_ts,
@@ -131,7 +108,7 @@ def listen_channel(
                 if m.get("ts") != thread_ts and m.get("ts", "") > latest_ts
             ]
         else:
-            response = _call_with_backoff(
+            response = call_with_backoff(
                 client.conversations_history,
                 channel=channel_id,
                 oldest=exclusive_oldest,
