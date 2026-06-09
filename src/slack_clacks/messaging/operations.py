@@ -232,7 +232,8 @@ def parse_timestamp(value: str) -> str:
 def open_dm_channel(client: WebClient, user_id: str) -> str | None:
     """
     Open a DM channel with a user.
-    Returns channel ID or None if failed.
+    Returns channel ID, or None if the open failed.
+    Re-raises rate-limited SlackApiError instead of returning None.
     """
     try:
         response = client.conversations_open(users=[user_id])
