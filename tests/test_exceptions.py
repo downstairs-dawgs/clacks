@@ -2,25 +2,28 @@ import unittest
 from typing import Any
 
 from slack_sdk.errors import SlackApiError
+from slack_sdk.web.slack_response import SlackResponse
 
 from slack_clacks.exceptions import ClacksRateLimited, rate_limit_retry_after
 
 
-class StubSlackResponse:
-    """Minimal stand-in for slack_sdk's SlackResponse in SlackApiError."""
-
-    def __init__(
-        self,
-        status_code: int,
-        data: dict[str, Any] | None = None,
-        headers: dict[str, str] | None = None,
-    ) -> None:
-        self.status_code = status_code
-        self.data = data or {}
-        self.headers = headers or {}
-
-    def get(self, key: str, default: Any = None) -> Any:
-        return self.data.get(key, default)
+def slack_response(
+    status_code: int,
+    data: dict[str, Any] | bytes | None = None,
+    headers: dict[str, str] | None = None,
+) -> SlackResponse:
+    """Build a real SlackResponse offline (no client, no HTTP)."""
+    if data is None:
+        data = {"ok": False, "error": "ratelimited"}
+    return SlackResponse(
+        client=None,
+        http_verb="POST",
+        api_url="https://slack.com/api/conversations.list",
+        req_args={},
+        data=data,
+        headers=headers or {},
+        status_code=status_code,
+    )
 
 
 def rate_limited_error(
@@ -28,9 +31,7 @@ def rate_limited_error(
     data: dict[str, Any] | None = None,
     headers: dict[str, str] | None = None,
 ) -> SlackApiError:
-    if data is None:
-        data = {"ok": False, "error": "ratelimited"}
-    response = StubSlackResponse(status_code, data=data, headers=headers)
+    response = slack_response(status_code, data=data, headers=headers)
     return SlackApiError("The request to the Slack API failed.", response)
 
 
@@ -49,6 +50,10 @@ class TestRateLimitRetryAfter(unittest.TestCase):
 
     def test_malformed_header_value(self):
         error = rate_limited_error(headers={"Retry-After": "soon"})
+        self.assertIsNone(rate_limit_retry_after(error))
+
+    def test_negative_header_value(self):
+        error = rate_limited_error(headers={"Retry-After": "-5"})
         self.assertIsNone(rate_limit_retry_after(error))
 
     def test_malformed_value_falls_back_to_valid_duplicate(self):
@@ -89,7 +94,18 @@ class TestClacksRateLimitedFromSlackError(unittest.TestCase):
         )
         self.assertIsNone(ClacksRateLimited.from_slack_error(error))
 
+    def test_bytes_response_data_returns_none(self):
+        # SlackResponse.get raises ValueError on bytes data; from_slack_error
+        # must tolerate it instead of crashing. SlackApiError's constructor
+        # str()s the response (which also rejects bytes), so attach the bytes
+        # response after construction.
+        error = SlackApiError("boom", None)
+        error.response = slack_response(200, data=b"not json")
+        self.assertIsNone(ClacksRateLimited.from_slack_error(error))
+
     def test_error_without_response_returns_none(self):
+        # Deliberately degenerate case: SlackApiError carrying no response at
+        # all, which a real SlackResponse cannot represent.
         error = SlackApiError("boom", None)
         self.assertIsNone(ClacksRateLimited.from_slack_error(error))
 

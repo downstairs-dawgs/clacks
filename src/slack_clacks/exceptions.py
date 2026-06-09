@@ -22,14 +22,21 @@ def rate_limit_retry_after(error: SlackApiError) -> int | None:
         if str(key).lower() != "retry-after":
             continue
         try:
-            return int(str(value).strip())
+            seconds = int(str(value).strip())
         except ValueError:
             continue
+        if seconds < 0:
+            continue
+        return seconds
     return None
 
 
 class ClacksRateLimited(Exception):
-    """Raised when Slack rate limits a request (HTTP 429 / "ratelimited")."""
+    """CLI-facing translation of a Slack rate limit (HTTP 429 / "ratelimited").
+
+    Carries the Retry-After hint and renders the user-facing message; it is
+    constructed from a SlackApiError rather than raised by API call sites.
+    """
 
     def __init__(self, retry_after: int | None = None) -> None:
         self.retry_after = retry_after
@@ -53,7 +60,7 @@ class ClacksRateLimited(Exception):
             return cls(retry_after=rate_limit_retry_after(error))
         try:
             error_code = response.get("error")
-        except (AttributeError, TypeError):
+        except (AttributeError, TypeError, ValueError):
             return None
         if error_code == "ratelimited":
             return cls(retry_after=rate_limit_retry_after(error))

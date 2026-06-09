@@ -4,11 +4,13 @@ from datetime import timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 from slack_sdk.errors import SlackApiError
+from slack_sdk.web.slack_response import SlackResponse
 
 from slack_clacks.messaging.operations import (
     call_with_backoff,
     parse_schedule_time,
     parse_timestamp,
+    resolve_channel_id,
     resolve_message_timestamp,
 )
 
@@ -369,6 +371,29 @@ class TestCallWithBackoff(unittest.TestCase):
 
         with self.assertRaises(SlackApiError):
             call_with_backoff(mock_func, max_retries=2, base_delay=0.01)
+
+
+class TestResolveChannelIdRateLimit(unittest.TestCase):
+    def test_rate_limited_lookup_propagates_slack_api_error(self):
+        """A 429 during name resolution must not become channel-not-found."""
+        response = SlackResponse(
+            client=None,
+            http_verb="POST",
+            api_url="https://slack.com/api/conversations.list",
+            req_args={},
+            data={"ok": False, "error": "ratelimited"},
+            headers={"Retry-After": "30"},
+            status_code=429,
+        )
+        error = SlackApiError("The request to the Slack API failed.", response)
+
+        client = MagicMock()
+        client.conversations_list.side_effect = error
+
+        with self.assertRaises(SlackApiError) as ctx:
+            resolve_channel_id(client, "general")
+
+        self.assertIs(ctx.exception, error)
 
 
 if __name__ == "__main__":

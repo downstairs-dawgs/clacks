@@ -12,6 +12,7 @@ from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from sqlalchemy.orm import Session
 
+from slack_clacks.exceptions import ClacksRateLimited
 from slack_clacks.messaging.exceptions import (
     ClacksChannelNotFoundError,
     ClacksUserNotFoundError,
@@ -83,6 +84,8 @@ def resolve_channel_id(
             if not cursor:
                 break
     except SlackApiError as e:
+        if ClacksRateLimited.from_slack_error(e) is not None:
+            raise
         raise ClacksChannelNotFoundError(channel_identifier) from e
 
     raise ClacksChannelNotFoundError(channel_identifier)
@@ -132,6 +135,8 @@ def resolve_user_id(
             if not cursor:
                 break
     except SlackApiError as e:
+        if ClacksRateLimited.from_slack_error(e) is not None:
+            raise
         raise ClacksUserNotFoundError(user_identifier) from e
 
     raise ClacksUserNotFoundError(user_identifier)
@@ -232,7 +237,9 @@ def open_dm_channel(client: WebClient, user_id: str) -> str | None:
     try:
         response = client.conversations_open(users=[user_id])
         return response["channel"]["id"]
-    except SlackApiError:
+    except SlackApiError as e:
+        if ClacksRateLimited.from_slack_error(e) is not None:
+            raise
         return None
 
 
