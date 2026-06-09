@@ -273,13 +273,19 @@ def handle_read(args: argparse.Namespace) -> None:
                 limit=args.limit,
                 oldest=oldest,
                 latest=latest,
+                cursor=args.cursor,
             )
         elif args.message:
             ts = resolve_message_timestamp(args.message)
             response = read_messages(client, channel_id, limit=1, latest=ts, oldest=ts)
         else:
             response = read_messages(
-                client, channel_id, limit=args.limit, latest=latest, oldest=oldest
+                client,
+                channel_id,
+                limit=args.limit,
+                latest=latest,
+                oldest=oldest,
+                cursor=args.cursor,
             )
 
         data = dict(response.data)
@@ -287,6 +293,19 @@ def handle_read(args: argparse.Namespace) -> None:
 
         with args.outfile as ofp:
             json.dump(data, ofp)
+
+
+def assert_cursor_nonempty(value: str) -> str:
+    """Reject empty/whitespace cursors at parse time.
+
+    Slack signals the last page with an empty ``next_cursor``; passing that
+    back would silently re-fetch page 1, so a paging loop would never end.
+    """
+    if not value.strip():
+        raise argparse.ArgumentTypeError(
+            "empty cursor: an empty next_cursor means the previous page was the last"
+        )
+    return value
 
 
 def generate_read_parser() -> argparse.ArgumentParser:
@@ -320,7 +339,9 @@ def generate_read_parser() -> argparse.ArgumentParser:
         type=str,
         help="Thread timestamp to read thread replies",
     )
-    parser.add_argument(
+    # --message reads exactly one message; --cursor pages through many.
+    message_or_cursor = parser.add_mutually_exclusive_group()
+    message_or_cursor.add_argument(
         "-m",
         "--message",
         type=str,
@@ -370,7 +391,17 @@ def generate_read_parser() -> argparse.ArgumentParser:
         "--limit",
         type=int,
         default=20,
-        help="Max messages to retrieve (default: 20)",
+        help="Max messages per request (default: 20); does not auto-follow cursors",
+    )
+    message_or_cursor.add_argument(
+        "--cursor",
+        type=assert_cursor_nonempty,
+        default=None,
+        help=(
+            "Pagination cursor from a previous response's "
+            "response_metadata.next_cursor; fetches the next page. "
+            "Stop paging when has_more is false (next_cursor empty)."
+        ),
     )
     add_order_argument(parser)
     parser.add_argument(

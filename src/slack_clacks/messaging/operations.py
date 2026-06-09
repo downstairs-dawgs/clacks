@@ -232,13 +232,25 @@ def read_messages(
     limit: int = 20,
     latest: str | None = None,
     oldest: str | None = None,
+    cursor: str | None = None,
 ):
     """
     Read messages from a channel or DM.
     Returns the Slack API response with messages.
+
+    ``limit`` caps this single request; when more messages exist Slack sets
+    ``has_more`` and ``response_metadata.next_cursor`` (rate-limited tiers may
+    additionally cap pages at ~15). Pass ``next_cursor`` back as ``cursor`` to
+    fetch the next page; an empty ``next_cursor`` means the last page. Cursors
+    are not followed automatically.
     """
     return client.conversations_history(
-        channel=channel, limit=limit, latest=latest, oldest=oldest, inclusive=True
+        channel=channel,
+        limit=limit,
+        latest=latest,
+        oldest=oldest,
+        inclusive=True,
+        cursor=cursor,
     )
 
 
@@ -249,10 +261,17 @@ def read_thread(
     limit: int = 100,
     oldest: str | None = None,
     latest: str | None = None,
+    cursor: str | None = None,
 ):
     """
     Read messages from a thread.
     Returns the Slack API response with thread replies.
+
+    ``limit`` caps this single request; when more replies exist Slack sets
+    ``has_more`` and ``response_metadata.next_cursor`` (rate-limited tiers may
+    additionally cap pages at ~15). Pass ``next_cursor`` back as ``cursor`` to
+    fetch the next page; an empty ``next_cursor`` means the last page. Cursors
+    are not followed automatically.
     """
     return client.conversations_replies(
         channel=channel,
@@ -261,6 +280,7 @@ def read_thread(
         oldest=oldest,
         latest=latest,
         inclusive=True,
+        cursor=cursor,
     )
 
 

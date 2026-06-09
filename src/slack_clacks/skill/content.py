@@ -181,6 +181,10 @@ Read thread:
 uvx --from slack-clacks clacks read -c "#general" -t "1234567890.123456"
 ```
 
+Pagination (channels and threads): `-l/--limit` caps a single request. If a
+response has `"has_more": true`, rerun with `--cursor <response_metadata.next_cursor>`
+to fetch the next page; stop when `next_cursor` is empty.
+
 ## Recent Activity
 
 View recent messages across all conversations:
