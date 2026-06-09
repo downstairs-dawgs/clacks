@@ -6,6 +6,7 @@ import re
 import sys
 import urllib.request
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from slack_sdk import WebClient
 
@@ -45,13 +46,16 @@ def list_files(
 
 def extract_file_id_from_permalink(url: str) -> str:
     """
-    Extract a Slack file ID from a permalink URL.
+    Extract a Slack file ID from a file URL.
 
-    Supports formats like:
-    - https://workspace.slack.com/files/U.../F2147483862/filename.txt
-    - https://files.slack.com/files-pri/T.../F2147483862/filename.txt
+    Supports the URL shapes Slack actually emits:
+    - permalink: https://<workspace>.slack.com/files/U.../F2147483862/filename.txt
+    - url_private / url_private_download (team and file IDs hyphen-joined):
+      https://files.slack.com/files-pri/T024BE7LD-F2147483862/filename.txt
+      (url_private_download inserts a /download/ segment; query params allowed)
     """
-    match = re.search(r"/(F[A-Z0-9]+)", url)
+    path = urlsplit(url).path
+    match = re.search(r"(?:^|[/-])(F[A-Z0-9]{8,})(?=/|$)", path)
     if not match:
         raise ValueError(f"Could not extract file ID from URL: {url}")
     return match.group(1)
