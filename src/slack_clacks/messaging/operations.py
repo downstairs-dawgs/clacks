@@ -52,6 +52,7 @@ def resolve_channel_id(
     Resolve channel identifier to channel ID.
     Accepts channel ID (C..., D..., G...), channel name (#general or general), or alias.
     Returns channel ID or raises ClacksChannelNotFoundError if not found.
+    Rate-limited lookups re-raise the original SlackApiError instead.
 
     Resolution order:
     1. Check if already a Slack channel ID (C..., D..., G...)
@@ -101,6 +102,7 @@ def resolve_user_id(
     Resolve user identifier to user ID.
     Accepts user ID (U...), username (@username or username), email, or alias.
     Returns user ID or raises ClacksUserNotFoundError if not found.
+    Rate-limited lookups re-raise the original SlackApiError instead.
 
     Resolution order:
     1. Check if already a Slack user ID (U...)

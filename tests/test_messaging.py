@@ -8,10 +8,12 @@ from slack_sdk.web.slack_response import SlackResponse
 
 from slack_clacks.messaging.operations import (
     call_with_backoff,
+    open_dm_channel,
     parse_schedule_time,
     parse_timestamp,
     resolve_channel_id,
     resolve_message_timestamp,
+    resolve_user_id,
 )
 
 
@@ -394,6 +396,64 @@ class TestResolveChannelIdRateLimit(unittest.TestCase):
             resolve_channel_id(client, "general")
 
         self.assertIs(ctx.exception, error)
+
+
+def rate_limited_slack_error(api_url: str) -> SlackApiError:
+    """A real SlackApiError shaped like a live-captured 429."""
+    response = SlackResponse(
+        client=None,
+        http_verb="POST",
+        api_url=api_url,
+        req_args={},
+        data={"ok": False, "error": "ratelimited"},
+        headers={"Retry-After": "30"},
+        status_code=429,
+    )
+    return SlackApiError("The request to the Slack API failed.", response)
+
+
+class TestResolveUserIdRateLimit(unittest.TestCase):
+    def test_rate_limited_lookup_propagates_slack_api_error(self):
+        """A 429 during name resolution must not become user-not-found."""
+        error = rate_limited_slack_error("https://slack.com/api/users.list")
+        client = MagicMock()
+        client.users_list.side_effect = error
+
+        with self.assertRaises(SlackApiError) as ctx:
+            resolve_user_id(client, "@nosuchuser")
+
+        self.assertIs(ctx.exception, error)
+
+
+class TestOpenDmChannelRateLimit(unittest.TestCase):
+    def test_rate_limited_open_propagates_slack_api_error(self):
+        """A 429 opening a DM must raise, not silently return None."""
+        error = rate_limited_slack_error("https://slack.com/api/conversations.open")
+        client = MagicMock()
+        client.conversations_open.side_effect = error
+
+        with self.assertRaises(SlackApiError) as ctx:
+            open_dm_channel(client, "U123456")
+
+        self.assertIs(ctx.exception, error)
+
+    def test_non_rate_limit_error_still_returns_none(self):
+        """Ordinary API failures keep the None contract."""
+        response = SlackResponse(
+            client=None,
+            http_verb="POST",
+            api_url="https://slack.com/api/conversations.open",
+            req_args={},
+            data={"ok": False, "error": "user_not_found"},
+            headers={},
+            status_code=200,
+        )
+        client = MagicMock()
+        client.conversations_open.side_effect = SlackApiError(
+            "The request to the Slack API failed.", response
+        )
+
+        self.assertIsNone(open_dm_channel(client, "U123456"))
 
 
 if __name__ == "__main__":
