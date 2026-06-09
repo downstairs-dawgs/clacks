@@ -4,12 +4,17 @@ from datetime import timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 from slack_sdk.errors import SlackApiError
+from slack_sdk.web.slack_response import SlackResponse
 
+from slack_clacks.exceptions import ClacksRateLimited
 from slack_clacks.messaging.operations import (
     call_with_backoff,
+    open_dm_channel,
     parse_schedule_time,
     parse_timestamp,
+    resolve_channel_id,
     resolve_message_timestamp,
+    resolve_user_id,
 )
 
 
@@ -369,6 +374,143 @@ class TestCallWithBackoff(unittest.TestCase):
 
         with self.assertRaises(SlackApiError):
             call_with_backoff(mock_func, max_retries=2, base_delay=0.01)
+
+
+class TestResolveChannelIdRateLimit(unittest.TestCase):
+    def test_rate_limited_lookup_propagates_slack_api_error(self):
+        """A 429 during name resolution must not become channel-not-found."""
+        response = SlackResponse(
+            client=None,
+            http_verb="POST",
+            api_url="https://slack.com/api/conversations.list",
+            req_args={},
+            data={"ok": False, "error": "ratelimited"},
+            headers={"Retry-After": "30"},
+            status_code=429,
+        )
+        error = SlackApiError("The request to the Slack API failed.", response)
+
+        client = MagicMock()
+        client.conversations_list.side_effect = error
+
+        with self.assertRaises(SlackApiError) as ctx:
+            resolve_channel_id(client, "general")
+
+        self.assertIs(ctx.exception, error)
+
+
+def rate_limited_slack_error(api_url: str) -> SlackApiError:
+    """A real SlackApiError shaped like a live-captured 429."""
+    response = SlackResponse(
+        client=None,
+        http_verb="POST",
+        api_url=api_url,
+        req_args={},
+        data={"ok": False, "error": "ratelimited"},
+        headers={"Retry-After": "30"},
+        status_code=429,
+    )
+    return SlackApiError("The request to the Slack API failed.", response)
+
+
+class TestCallWithBackoffTypedRateLimit(unittest.TestCase):
+    @patch("slack_clacks.messaging.operations.time.sleep")
+    def test_typed_rate_limit_retries_then_succeeds(self, mock_sleep):
+        """A ClacksRateLimited from a real 429 is retried like a raw error."""
+        error = ClacksRateLimited.from_slack_error(
+            rate_limited_slack_error("https://slack.com/api/conversations.history")
+        )
+        self.assertIsNotNone(error)
+
+        call_count = 0
+
+        def mock_func(**kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count < 3:
+                raise error
+            return {"messages": []}
+
+        result = call_with_backoff(mock_func, max_retries=5, base_delay=0.01)
+        self.assertEqual(call_count, 3)
+        self.assertEqual(result, {"messages": []})
+        # The server's Retry-After hint, not exponential backoff, sets the delay.
+        mock_sleep.assert_called_with(30.0)
+
+    @patch("slack_clacks.messaging.operations.time.sleep")
+    def test_typed_rate_limit_raises_after_max_retries(self, mock_sleep):
+        """The typed exception propagates once retries are exhausted."""
+        error = ClacksRateLimited.from_slack_error(
+            rate_limited_slack_error("https://slack.com/api/conversations.history")
+        )
+        self.assertIsNotNone(error)
+
+        def mock_func(**kwargs):
+            raise error
+
+        with self.assertRaises(ClacksRateLimited) as ctx:
+            call_with_backoff(mock_func, max_retries=2, base_delay=0.01)
+
+        self.assertIs(ctx.exception, error)
+
+
+class TestResolveChannelIdTypedRateLimit(unittest.TestCase):
+    def test_typed_rate_limit_propagates(self):
+        """A ClacksRateLimited from the client (production path) propagates."""
+        error = ClacksRateLimited.from_slack_error(
+            rate_limited_slack_error("https://slack.com/api/conversations.list")
+        )
+        client = MagicMock()
+        client.conversations_list.side_effect = error
+
+        with self.assertRaises(ClacksRateLimited) as ctx:
+            resolve_channel_id(client, "general")
+
+        self.assertIs(ctx.exception, error)
+
+
+class TestResolveUserIdRateLimit(unittest.TestCase):
+    def test_rate_limited_lookup_propagates_slack_api_error(self):
+        """A 429 during name resolution must not become user-not-found."""
+        error = rate_limited_slack_error("https://slack.com/api/users.list")
+        client = MagicMock()
+        client.users_list.side_effect = error
+
+        with self.assertRaises(SlackApiError) as ctx:
+            resolve_user_id(client, "@nosuchuser")
+
+        self.assertIs(ctx.exception, error)
+
+
+class TestOpenDmChannelRateLimit(unittest.TestCase):
+    def test_rate_limited_open_propagates_slack_api_error(self):
+        """A 429 opening a DM must raise, not silently return None."""
+        error = rate_limited_slack_error("https://slack.com/api/conversations.open")
+        client = MagicMock()
+        client.conversations_open.side_effect = error
+
+        with self.assertRaises(SlackApiError) as ctx:
+            open_dm_channel(client, "U123456")
+
+        self.assertIs(ctx.exception, error)
+
+    def test_non_rate_limit_error_still_returns_none(self):
+        """Ordinary API failures keep the None contract."""
+        response = SlackResponse(
+            client=None,
+            http_verb="POST",
+            api_url="https://slack.com/api/conversations.open",
+            req_args={},
+            data={"ok": False, "error": "user_not_found"},
+            headers={},
+            status_code=200,
+        )
+        client = MagicMock()
+        client.conversations_open.side_effect = SlackApiError(
+            "The request to the Slack API failed.", response
+        )
+
+        self.assertIsNone(open_dm_channel(client, "U123456"))
 
 
 if __name__ == "__main__":

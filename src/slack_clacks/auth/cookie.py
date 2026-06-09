@@ -8,6 +8,7 @@ from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 
 from slack_clacks.auth.constants import MODE_COOKIE
+from slack_clacks.exceptions import ClacksRateLimited
 
 
 def authenticate_with_cookie(token: str, cookie: str) -> Dict[str, str]:
@@ -40,4 +41,6 @@ def authenticate_with_cookie(token: str, cookie: str) -> Dict[str, str]:
             "app_type": MODE_COOKIE,
         }
     except SlackApiError as e:
+        if ClacksRateLimited.from_slack_error(e) is not None:
+            raise
         raise Exception(f"Cookie authentication failed: {e.response['error']}")

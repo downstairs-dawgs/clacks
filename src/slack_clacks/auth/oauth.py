@@ -23,6 +23,7 @@ from slack_clacks.auth.constants import (
     OAUTH_PORT,
     REDIRECT_URI,
 )
+from slack_clacks.exceptions import ClacksRateLimited
 
 
 class OAuthCallbackHandler(http.server.BaseHTTPRequestHandler):
@@ -164,4 +165,6 @@ def start_oauth_flow(
             "app_type": mode,
         }
     except SlackApiError as e:
+        if ClacksRateLimited.from_slack_error(e) is not None:
+            raise
         raise Exception(f"Failed to exchange authorization code: {e.response['error']}")

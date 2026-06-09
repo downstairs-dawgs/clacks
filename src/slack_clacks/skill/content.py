@@ -299,6 +299,9 @@ uvx --from slack-clacks clacks config info
 
 All commands output JSON to stdout.
 The `listen` command outputs NDJSON (one JSON object per line).
+Exit code 75 means Slack rate limited the call: stderr is `rate limited: retry in Ns`
+(wait N seconds) or `rate limited: retry later` (no delay given; wait ~30s). Then
+re-run the same command.
 """
 
 OPENAI_YAML = """\

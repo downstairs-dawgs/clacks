@@ -12,6 +12,7 @@ from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from sqlalchemy.orm import Session
 
+from slack_clacks.exceptions import ClacksRateLimited
 from slack_clacks.messaging.exceptions import (
     ClacksChannelNotFoundError,
     ClacksUserNotFoundError,
@@ -24,20 +25,29 @@ def call_with_backoff(
     base_delay: float = 1.0,
     **kwargs: Any,
 ) -> Any:
-    """Call a Slack API function with exponential backoff on rate limit."""
+    """Call a Slack API function with exponential backoff on rate limit.
+
+    Rate limits are detected via ``ClacksRateLimited.from_slack_error``, so
+    both typed ClacksRateLimited errors and raw SlackApiError 429s (whatever
+    their payload shape) are retried; the response is never dereferenced
+    directly. The Retry-After hint is used as the delay when available,
+    falling back to exponential backoff otherwise. Non-rate-limit errors and
+    the final rate-limited attempt re-raise.
+    """
     for attempt in range(max_retries):
         try:
             return func(**kwargs)
         except SlackApiError as e:
-            if e.response.get("error") == "ratelimited":
-                if attempt == max_retries - 1:
-                    raise
-                # Get retry-after header or use exponential backoff
-                retry_after = int(e.response.headers.get("Retry-After", 0))
-                delay = max(retry_after, base_delay * (2**attempt))
-                time.sleep(delay)
-            else:
+            rate_limited = ClacksRateLimited.from_slack_error(e)
+            if rate_limited is None:
                 raise
+            if attempt == max_retries - 1:
+                raise
+            if rate_limited.retry_after is not None:
+                delay = float(rate_limited.retry_after)
+            else:
+                delay = base_delay * (2**attempt)
+            time.sleep(delay)
     return None  # Should never reach here
 
 
@@ -51,6 +61,7 @@ def resolve_channel_id(
     Resolve channel identifier to channel ID.
     Accepts channel ID (C..., D..., G...), channel name (#general or general), or alias.
     Returns channel ID or raises ClacksChannelNotFoundError if not found.
+    Rate-limited lookups re-raise the original SlackApiError instead.
 
     Resolution order:
     1. Check if already a Slack channel ID (C..., D..., G...)
@@ -83,6 +94,8 @@ def resolve_channel_id(
             if not cursor:
                 break
     except SlackApiError as e:
+        if ClacksRateLimited.from_slack_error(e) is not None:
+            raise
         raise ClacksChannelNotFoundError(channel_identifier) from e
 
     raise ClacksChannelNotFoundError(channel_identifier)
@@ -98,6 +111,7 @@ def resolve_user_id(
     Resolve user identifier to user ID.
     Accepts user ID (U...), username (@username or username), email, or alias.
     Returns user ID or raises ClacksUserNotFoundError if not found.
+    Rate-limited lookups re-raise the original SlackApiError instead.
 
     Resolution order:
     1. Check if already a Slack user ID (U...)
@@ -132,6 +146,8 @@ def resolve_user_id(
             if not cursor:
                 break
     except SlackApiError as e:
+        if ClacksRateLimited.from_slack_error(e) is not None:
+            raise
         raise ClacksUserNotFoundError(user_identifier) from e
 
     raise ClacksUserNotFoundError(user_identifier)
@@ -227,12 +243,15 @@ def parse_timestamp(value: str) -> str:
 def open_dm_channel(client: WebClient, user_id: str) -> str | None:
     """
     Open a DM channel with a user.
-    Returns channel ID or None if failed.
+    Returns channel ID, or None if the open failed.
+    Re-raises rate-limited SlackApiError instead of returning None.
     """
     try:
         response = client.conversations_open(users=[user_id])
         return response["channel"]["id"]
-    except SlackApiError:
+    except SlackApiError as e:
+        if ClacksRateLimited.from_slack_error(e) is not None:
+            raise
         return None
 
 

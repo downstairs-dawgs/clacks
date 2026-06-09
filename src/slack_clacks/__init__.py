@@ -1,7 +1,10 @@
 import sys
 from collections.abc import Sequence
 
+from slack_sdk.errors import SlackApiError
+
 from slack_clacks.cli import generate_cli
+from slack_clacks.exceptions import RATE_LIMIT_EXIT_CODE, ClacksRateLimited
 from slack_clacks.skill.status import check_skill_install_status
 
 
@@ -33,7 +36,14 @@ def main(argv: Sequence[str] | None = None) -> None:
     warn_if_skill_install_is_outdated(args_list)
     parser = generate_cli()
     args = parser.parse_args(args_list)
-    args.func(args)
+    try:
+        args.func(args)
+    except SlackApiError as error:
+        rate_limited = ClacksRateLimited.from_slack_error(error)
+        if rate_limited is None:
+            raise
+        print(rate_limited, file=sys.stderr)
+        sys.exit(RATE_LIMIT_EXIT_CODE)
 
 
 if __name__ == "__main__":
