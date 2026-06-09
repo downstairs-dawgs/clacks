@@ -228,11 +228,6 @@ def generate_schedule_parser() -> argparse.ArgumentParser:
 
 
 def handle_read(args: argparse.Namespace) -> None:
-    if args.cursor and args.message:
-        raise ValueError(
-            "--cursor cannot be combined with --message (single-message read)."
-        )
-
     ensure_db_updated(config_dir=args.config_dir)
     with get_session(args.config_dir) as session:
         context = resolve_context(session, args.context)
@@ -300,6 +295,19 @@ def handle_read(args: argparse.Namespace) -> None:
             json.dump(data, ofp)
 
 
+def _nonempty_cursor(value: str) -> str:
+    """Reject empty/whitespace cursors at parse time.
+
+    Slack signals the last page with an empty ``next_cursor``; passing that
+    back would silently re-fetch page 1, so a paging loop would never end.
+    """
+    if not value.strip():
+        raise argparse.ArgumentTypeError(
+            "empty cursor: an empty next_cursor means the previous page was the last"
+        )
+    return value
+
+
 def generate_read_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Read messages from a channel, DM, or thread",
@@ -331,7 +339,9 @@ def generate_read_parser() -> argparse.ArgumentParser:
         type=str,
         help="Thread timestamp to read thread replies",
     )
-    parser.add_argument(
+    # --message reads exactly one message; --cursor pages through many.
+    message_or_cursor = parser.add_mutually_exclusive_group()
+    message_or_cursor.add_argument(
         "-m",
         "--message",
         type=str,
@@ -383,14 +393,14 @@ def generate_read_parser() -> argparse.ArgumentParser:
         default=20,
         help="Max messages per request (default: 20); does not auto-follow cursors",
     )
-    parser.add_argument(
+    message_or_cursor.add_argument(
         "--cursor",
-        type=str,
+        type=_nonempty_cursor,
         default=None,
         help=(
             "Pagination cursor from a previous response's "
             "response_metadata.next_cursor; fetches the next page. "
-            "Cannot be combined with --message."
+            "Stop paging when has_more is false (next_cursor empty)."
         ),
     )
     add_order_argument(parser)
