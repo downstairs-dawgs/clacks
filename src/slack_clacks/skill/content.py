@@ -181,6 +181,19 @@ Read thread:
 uvx --from slack-clacks clacks read -c "#general" -t "1234567890.123456"
 ```
 
+Pagination: `-l/--limit` caps a single request. On rate-limited tiers Slack
+returns a partial page with `"has_more": true` and a
+`response_metadata.next_cursor`. Pass that value back via `--cursor` to fetch
+the next page (works for both channels and threads). Cursors are not followed
+automatically.
+```bash
+# page 1 -> note response_metadata.next_cursor in the output
+uvx --from slack-clacks clacks read -c "#general" -t "1234567890.123456" --order asc
+# page 2
+uvx --from slack-clacks clacks read -c "#general" -t "1234567890.123456" \
+  --order asc --cursor "<next_cursor>"
+```
+
 ## Recent Activity
 
 View recent messages across all conversations:

@@ -228,6 +228,11 @@ def generate_schedule_parser() -> argparse.ArgumentParser:
 
 
 def handle_read(args: argparse.Namespace) -> None:
+    if args.cursor and args.message:
+        raise ValueError(
+            "--cursor cannot be combined with --message (single-message read)."
+        )
+
     ensure_db_updated(config_dir=args.config_dir)
     with get_session(args.config_dir) as session:
         context = resolve_context(session, args.context)
@@ -273,13 +278,19 @@ def handle_read(args: argparse.Namespace) -> None:
                 limit=args.limit,
                 oldest=oldest,
                 latest=latest,
+                cursor=args.cursor,
             )
         elif args.message:
             ts = resolve_message_timestamp(args.message)
             response = read_messages(client, channel_id, limit=1, latest=ts, oldest=ts)
         else:
             response = read_messages(
-                client, channel_id, limit=args.limit, latest=latest, oldest=oldest
+                client,
+                channel_id,
+                limit=args.limit,
+                latest=latest,
+                oldest=oldest,
+                cursor=args.cursor,
             )
 
         data = dict(response.data)
@@ -370,7 +381,17 @@ def generate_read_parser() -> argparse.ArgumentParser:
         "--limit",
         type=int,
         default=20,
-        help="Max messages to retrieve (default: 20)",
+        help="Max messages per request (default: 20); does not auto-follow cursors",
+    )
+    parser.add_argument(
+        "--cursor",
+        type=str,
+        default=None,
+        help=(
+            "Pagination cursor from a previous response's "
+            "response_metadata.next_cursor; fetches the next page. "
+            "Cannot be combined with --message."
+        ),
     )
     add_order_argument(parser)
     parser.add_argument(
