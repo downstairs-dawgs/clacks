@@ -56,6 +56,12 @@ class TestRateLimitRetryAfter(unittest.TestCase):
         error = rate_limited_error(headers={"Retry-After": "-5"})
         self.assertIsNone(rate_limit_retry_after(error))
 
+    def test_zero_header_value(self):
+        # 0 is treated as missing: honoring it would mean zero-delay hot
+        # retries in call_with_backoff and "retry in 0s" advice at the CLI.
+        error = rate_limited_error(headers={"Retry-After": "0"})
+        self.assertIsNone(rate_limit_retry_after(error))
+
     def test_malformed_value_falls_back_to_valid_duplicate(self):
         error = rate_limited_error(headers={"Retry-After": "soon", "retry-after": "30"})
         self.assertEqual(rate_limit_retry_after(error), 30)

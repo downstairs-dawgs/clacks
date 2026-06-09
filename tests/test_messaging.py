@@ -434,6 +434,8 @@ class TestCallWithBackoffTypedRateLimit(unittest.TestCase):
         result = call_with_backoff(mock_func, max_retries=5, base_delay=0.01)
         self.assertEqual(call_count, 3)
         self.assertEqual(result, {"messages": []})
+        # The server's Retry-After hint, not exponential backoff, sets the delay.
+        mock_sleep.assert_called_with(30.0)
 
     @patch("slack_clacks.messaging.operations.time.sleep")
     def test_typed_rate_limit_raises_after_max_retries(self, mock_sleep):

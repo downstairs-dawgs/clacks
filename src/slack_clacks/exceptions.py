@@ -13,7 +13,9 @@ def rate_limit_retry_after(error: SlackApiError) -> int | None:
     """Extract the Retry-After value (seconds) from a SlackApiError.
 
     Reads response headers case-insensitively and tolerates missing or
-    malformed values by returning None.
+    malformed values by returning None. Non-positive values are treated as
+    missing: a 0 hint would otherwise drive zero-delay hot retries in
+    call_with_backoff and useless "retry in 0s" advice from the CLI.
     """
     headers: Any = getattr(error.response, "headers", None)
     if not headers:
@@ -25,7 +27,7 @@ def rate_limit_retry_after(error: SlackApiError) -> int | None:
             seconds = int(str(value).strip())
         except ValueError:
             continue
-        if seconds < 0:
+        if seconds <= 0:
             continue
         return seconds
     return None
