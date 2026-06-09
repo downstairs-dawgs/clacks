@@ -109,6 +109,17 @@ class TestClacksRateLimitedFromSlackError(unittest.TestCase):
         error = SlackApiError("boom", None)
         self.assertIsNone(ClacksRateLimited.from_slack_error(error))
 
+    def test_already_translated_error_returns_itself(self):
+        # Idempotency: the client raises ClacksRateLimited at the source, and
+        # downstream seams may translate again; identity must be preserved.
+        rate_limited = ClacksRateLimited(30)
+        self.assertIs(ClacksRateLimited.from_slack_error(rate_limited), rate_limited)
+
+    def test_translated_error_carries_response(self):
+        error = rate_limited_error(headers={"Retry-After": "30"})
+        translated = ClacksRateLimited.from_slack_error(error)
+        self.assertIs(translated.response, error.response)
+
 
 if __name__ == "__main__":
     unittest.main()

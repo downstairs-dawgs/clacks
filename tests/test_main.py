@@ -10,7 +10,7 @@ from slack_sdk.errors import SlackApiError
 from slack_sdk.web.slack_response import SlackResponse
 
 from slack_clacks import main
-from slack_clacks.exceptions import RATE_LIMIT_EXIT_CODE
+from slack_clacks.exceptions import RATE_LIMIT_EXIT_CODE, ClacksRateLimited
 from slack_clacks.skill.status import SkillInstallStatus
 
 
@@ -178,3 +178,12 @@ class TestMainRateLimitSeam(unittest.TestCase):
             self.run_main_with_error(error)
 
         self.assertIs(ctx.exception, error)
+
+    def test_clacks_rate_limited_from_client_exits_75(self):
+        """The production path: ClacksWebClient raises ClacksRateLimited
+        directly; the seam must handle it identically to a raw 429."""
+        code, stdout, stderr = self.run_main_with_error(ClacksRateLimited(30))
+
+        self.assertEqual(code, RATE_LIMIT_EXIT_CODE)
+        self.assertEqual(stderr, "rate limited: retry in 30s\n")
+        self.assertEqual(stdout, "")
