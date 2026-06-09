@@ -285,18 +285,36 @@ def read_thread(
 
 
 def get_recent_activity(
-    client: WebClient, conversation_limit: int = 100, message_limit: int = 20
+    client: WebClient, conversation_limit: int = 200, message_limit: int = 20
 ):
     """
     Get recent messages across all user's conversations.
     Returns a list of messages with their conversation context, sorted by timestamp.
+
+    ``conversation_limit`` is the per-page size for ``users_conversations``;
+    pages are followed via ``response_metadata.next_cursor`` until exhausted,
+    so every conversation is enumerated regardless of how many there are.
+    Slack caps pages at 200 on standard tiers (hence the default), so the
+    value only affects request count, never completeness. There is
+    deliberately no total cap: one would silently drop conversations, which
+    is exactly the bug this pagination exists to fix.
     """
-    conversations_response = client.users_conversations(
-        types="public_channel,private_channel,mpim,im", limit=conversation_limit
-    )
+    channels = []
+    cursor: str | None = None
+    while True:
+        response = client.users_conversations(
+            types="public_channel,private_channel,mpim,im",
+            limit=conversation_limit,
+            cursor=cursor,
+        )
+        channels.extend(response["channels"])
+        response_metadata = response.get("response_metadata")
+        cursor = response_metadata.get("next_cursor") if response_metadata else None
+        if not cursor:
+            break
 
     all_messages = []
-    for channel in conversations_response["channels"]:
+    for channel in channels:
         try:
             history_response = client.conversations_history(
                 channel=channel["id"], limit=1
