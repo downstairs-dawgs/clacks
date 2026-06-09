@@ -20,6 +20,12 @@ def get_file_info(client: WebClient, file_id: str) -> dict | bytes:
     return response.data
 
 
+def delete_file(client: WebClient, file_id: str) -> dict | bytes:
+    """Delete a file from Slack."""
+    response = client.files_delete(file=file_id)
+    return response.data
+
+
 def list_files(
     client: WebClient,
     channel: str | None = None,
