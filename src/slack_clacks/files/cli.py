@@ -170,7 +170,7 @@ def generate_files_cli() -> argparse.ArgumentParser:
     id_group.add_argument(
         "--permalink",
         type=str,
-        help="Slack file permalink URL",
+        help="Slack file URL: permalink or url_private/url_private_download",
     )
     dl_parser.add_argument(
         "-w",
@@ -265,7 +265,7 @@ def generate_files_cli() -> argparse.ArgumentParser:
     del_id_group.add_argument(
         "--permalink",
         type=str,
-        help="Slack file permalink URL",
+        help="Slack file URL: permalink or url_private/url_private_download",
     )
     del_parser.add_argument(
         "-o",

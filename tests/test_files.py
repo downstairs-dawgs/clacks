@@ -54,6 +54,23 @@ class TestExtractFileIdFromPermalink(unittest.TestCase):
         with self.assertRaises(ValueError):
             extract_file_id_from_permalink("https://example.com/F12/file.txt")
 
+    def test_minimum_length_file_id(self):
+        # F + exactly 8 chars: the legacy boundary from issue #94. Pins the
+        # {8,} floor — a tightening to {9,} must fail here.
+        url = "https://files.slack.com/files-pri/T024BE7LD-F024BERPE/x.png"
+        self.assertEqual(extract_file_id_from_permalink(url), "F024BERPE")
+
+    def test_path_ending_at_id(self):
+        # No filename segment: exercises the $ branch of the lookahead.
+        url = "https://files.slack.com/files-pri/T024BE7LD-F9876ABCDE?t=xoxe-1"
+        self.assertEqual(extract_file_id_from_permalink(url), "F9876ABCDE")
+
+    def test_glued_token_rejected_by_lookahead(self):
+        # An ID-like token glued to trailing text, with no real ID anywhere:
+        # only the (?=/|$) lookahead rejects this (leftmost match cannot).
+        with self.assertRaises(ValueError):
+            extract_file_id_from_permalink("https://example.com/DRAFT-FINAL2026X.txt")
+
 
 class TestBuildDownloadHeaders(unittest.TestCase):
     def test_normal_mode(self):
