@@ -18,8 +18,28 @@ class TestExtractFileIdFromPermalink(unittest.TestCase):
         url = "https://myteam.slack.com/files/U123ABC/F2147483862/report.pdf"
         self.assertEqual(extract_file_id_from_permalink(url), "F2147483862")
 
-    def test_files_pri_url(self):
-        url = "https://files.slack.com/files-pri/T0001/F9876ABCDE/image.png"
+    def test_url_private_hyphen_joined(self):
+        url = "https://files.slack.com/files-pri/T024BE7LD-F9876ABCDE/image.png"
+        self.assertEqual(extract_file_id_from_permalink(url), "F9876ABCDE")
+
+    def test_url_private_download(self):
+        url = (
+            "https://files.slack.com/files-pri/T024BE7LD-F9876ABCDE/download/image.png"
+        )
+        self.assertEqual(extract_file_id_from_permalink(url), "F9876ABCDE")
+
+    def test_url_with_query_params(self):
+        url = (
+            "https://files.slack.com/files-pri/"
+            "T024BE7LD-F9876ABCDE/report.pdf?t=xoxe-F0000000000"
+        )
+        self.assertEqual(extract_file_id_from_permalink(url), "F9876ABCDE")
+
+    def test_filename_with_id_like_token(self):
+        url = (
+            "https://files.slack.com/files-pri/"
+            "T024BE7LD-F9876ABCDE/DRAFT-FINAL2026X.txt"
+        )
         self.assertEqual(extract_file_id_from_permalink(url), "F9876ABCDE")
 
     def test_invalid_url_raises(self):
@@ -29,6 +49,10 @@ class TestExtractFileIdFromPermalink(unittest.TestCase):
     def test_no_f_prefix_raises(self):
         with self.assertRaises(ValueError):
             extract_file_id_from_permalink("https://slack.com/files/U123/not-a-file")
+
+    def test_short_f_segment_raises(self):
+        with self.assertRaises(ValueError):
+            extract_file_id_from_permalink("https://example.com/F12/file.txt")
 
 
 class TestBuildDownloadHeaders(unittest.TestCase):
