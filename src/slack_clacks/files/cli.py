@@ -17,6 +17,7 @@ from slack_clacks.configuration.database import (
     resolve_context,
 )
 from slack_clacks.files.operations import (
+    delete_file,
     download_file_to_path,
     download_file_to_stdout,
     extract_file_id_from_permalink,
@@ -119,9 +120,30 @@ def handle_info(args: argparse.Namespace) -> None:
         json.dump(result, sys.stdout)
 
 
+def handle_delete(args: argparse.Namespace) -> None:
+    ensure_db_updated(config_dir=args.config_dir)
+    with get_session(args.config_dir) as session:
+        context = resolve_context(session, args.context)
+
+        scopes = get_scopes_for_mode(context.app_type)
+        validate("files:write", scopes, raise_on_error=True)
+
+        client = create_client(context.access_token, context.app_type)
+
+        # Resolve file ID
+        if args.file_id:
+            file_id = args.file_id
+        else:
+            file_id = extract_file_id_from_permalink(args.permalink)
+
+        result = delete_file(client, file_id)
+        with args.outfile as ofp:
+            json.dump(result, ofp)
+
+
 def generate_files_cli() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Upload, download, list, and inspect files"
+        description="Upload, download, list, inspect, and delete files"
     )
     parser.set_defaults(func=lambda _: parser.print_help())
 
@@ -219,6 +241,39 @@ def generate_files_cli() -> argparse.ArgumentParser:
         help="Slack file ID (e.g., F2147483862)",
     )
     info_parser.set_defaults(func=handle_info)
+
+    # --- delete ---
+    del_parser = subparsers.add_parser(
+        "delete", help="Delete a file from Slack (your own files only)"
+    )
+    del_parser.add_argument(
+        "-D",
+        "--config-dir",
+        type=str,
+        default=None,
+        help="Configuration directory",
+    )
+    add_context_argument(del_parser)
+    del_id_group = del_parser.add_mutually_exclusive_group(required=True)
+    del_id_group.add_argument(
+        "-i",
+        "--file-id",
+        type=str,
+        help="Slack file ID (e.g., F2147483862)",
+    )
+    del_id_group.add_argument(
+        "--permalink",
+        type=str,
+        help="Slack file permalink URL",
+    )
+    del_parser.add_argument(
+        "-o",
+        "--outfile",
+        type=argparse.FileType("a"),
+        default=sys.stdout,
+        help="Output file for JSON results (default: stdout)",
+    )
+    del_parser.set_defaults(func=handle_delete)
 
     # --- upload ---
     upload_parser = generate_upload_parser()

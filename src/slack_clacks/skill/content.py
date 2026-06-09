@@ -230,6 +230,11 @@ Private upload (returns permalink, not shared to any channel):
 echo "print('hello')" | uvx --from slack-clacks clacks files upload -t python
 ```
 
+Delete a file (your own files only):
+```bash
+uvx --from slack-clacks clacks files delete -i F2147483862
+```
+
 ## Listening for Messages
 
 Listen for new messages in a channel (outputs NDJSON, one message per line):
