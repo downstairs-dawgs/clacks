@@ -53,12 +53,12 @@ def sort_messages_by_ts(messages: list, order: str) -> list:
 def add_order_argument(parser: argparse.ArgumentParser) -> None:
     """Attach the shared ``--order {asc,desc}`` flag.
 
-    A client-side, post-fetch re-sort of the messages already in the
-    response. It does not change which messages Slack returns, and it
-    sorts only the current page of results, not across paginated
-    requests. ``desc`` (default) is newest-first (Slack's native return
-    order); ``asc`` is oldest-first — convenient for agentic loops that
-    consume oldest-first.
+    The flag re-sorts the fetched messages by timestamp before printing.
+    It is client-side and display-only: it does not change which messages
+    Slack returns, and it orders only the output of a single invocation
+    (separate pages or invocations are not merged). ``desc`` (default) is
+    newest-first; ``asc`` is oldest-first — convenient for agentic loops
+    that consume oldest-first.
     """
     parser.add_argument(
         "--order",
@@ -66,11 +66,11 @@ def add_order_argument(parser: argparse.ArgumentParser) -> None:
         choices=("asc", "desc"),
         default="desc",
         help=(
-            "Re-sort the messages in this response by timestamp before "
-            "printing. Client-side only: does not change which messages "
-            "Slack returns, and sorts only the current page of results, "
-            "not across pages. 'desc' (default) is newest-first (Slack's "
-            "native order); 'asc' is oldest-first."
+            "Re-sort the fetched messages by timestamp before printing. "
+            "Client-side only: does not change which messages Slack "
+            "returns, and orders only this command's output (separate "
+            "pages are not merged). 'desc' (default) is newest-first; "
+            "'asc' is oldest-first."
         ),
     )
 
@@ -629,8 +629,9 @@ examples:
         choices=["timestamp", "score"],
         default="timestamp",
         help=(
-            "Slack-side ranking: sort results by timestamp or relevance "
-            "score (default: timestamp)"
+            "Slack-side ranking: timestamp or relevance score (default: "
+            "timestamp). Chooses which results each page contains; "
+            "printed order is still controlled by --order."
         ),
     )
     parser.add_argument(
