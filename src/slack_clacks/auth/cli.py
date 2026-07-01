@@ -5,6 +5,11 @@ import sys
 from slack_clacks.auth.cert import generate_self_signed_cert, get_cert_info
 from slack_clacks.auth.constants import MODE_CLACKS, MODE_CLACKS_LITE, MODE_COOKIE
 from slack_clacks.auth.cookie import authenticate_with_cookie
+from slack_clacks.auth.instructions import (
+    available_modes,
+    get_instructions,
+    get_overview,
+)
 from slack_clacks.auth.oauth import start_oauth_flow
 from slack_clacks.configuration.cli import add_context_argument
 from slack_clacks.configuration.database import (
@@ -158,6 +163,13 @@ def handle_status(args: argparse.Namespace) -> None:
             json.dump(output, ofp)
 
 
+def handle_instructions(args: argparse.Namespace) -> None:
+    if args.mode is None:
+        print(get_overview())
+    else:
+        print(get_instructions(args.mode))
+
+
 def handle_logout(args: argparse.Namespace) -> None:
     from slack_clacks.auth.client import create_client
 
@@ -250,6 +262,19 @@ def generate_cli() -> argparse.ArgumentParser:
         help="Output file for JSON results (default: stdout)",
     )
     login_parser.set_defaults(func=handle_login)
+
+    instructions_parser = subparsers.add_parser(
+        "instructions",
+        help="Show setup instructions for an authentication mode",
+    )
+    instructions_parser.add_argument(
+        "--mode",
+        type=str,
+        choices=available_modes(),
+        default=None,
+        help="Authentication mode to explain. Without this flag, lists all modes.",
+    )
+    instructions_parser.set_defaults(func=handle_instructions)
 
     cert_parser = subparsers.add_parser("cert", help="Manage SSL certificates")
     cert_parser.set_defaults(func=lambda args: cert_parser.print_help())
