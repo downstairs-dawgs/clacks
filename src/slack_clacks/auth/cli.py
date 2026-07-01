@@ -30,6 +30,14 @@ def handle_login(args: argparse.Namespace) -> None:
 
     ensure_db_updated(config_dir=args.config_dir)
 
+    if args.token or args.cookie:
+        print(
+            "warning: passing --token/--cookie exposes secrets via shell "
+            "history, terminal scrollback, and process listings; omit them to "
+            "be prompted securely.",
+            file=sys.stderr,
+        )
+
     if args.mode == MODE_COOKIE:
         token = args.token
         if not token:
@@ -242,16 +250,18 @@ def generate_cli() -> argparse.ArgumentParser:
         "--token",
         type=str,
         help=(
-            "xoxc token from browser (optional, will prompt if not provided "
-            "when --mode=cookie)"
+            "xoxc token for --mode=cookie. Discouraged: passing secrets as "
+            "flags exposes them via shell history and process listings. Omit "
+            "to be prompted securely."
         ),
     )
     login_parser.add_argument(
         "--cookie",
         type=str,
         help=(
-            "d cookie value from browser (optional, will prompt if not "
-            "provided when --mode=cookie)"
+            "d cookie value for --mode=cookie. Discouraged: passing secrets "
+            "as flags exposes them via shell history and process listings. "
+            "Omit to be prompted securely."
         ),
     )
     login_parser.add_argument(

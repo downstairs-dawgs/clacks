@@ -71,11 +71,9 @@ You'll be prompted to enter:
 1. `xoxc` token
 2. `d` cookie value
 
-Or provide them directly:
-
-```bash
-clacks auth login --mode cookie --token "xoxc-..." --cookie "..." -c my-context
-```
+The prompt reads both values without echoing them. Do not pass them as
+`--token` / `--cookie` flags: command-line arguments are exposed through shell
+history, terminal scrollback, and process listings.
 
 ## Security Considerations
 
@@ -86,11 +84,13 @@ clacks auth login --mode cookie --token "xoxc-..." --cookie "..." -c my-context
 3. **Session expiration** - Tokens expire when you log out of Slack in the browser
 4. **No revocation** - Tokens can't be revoked via `clacks auth logout` (only OAuth tokens can)
 5. **Shared across workspaces** - The `d` cookie works for all your Slack workspaces
+6. **Argv exposure** - Passing secrets as `--token` / `--cookie` flags leaks them via shell history, terminal scrollback, and process listings; use the interactive prompt
 
 **Best Practices:**
 
 - Never share your tokens or cookies
 - Don't commit them to version control
+- Enter secrets at the interactive prompt; never pass them as `--token` / `--cookie` flags
 - Tokens expire when you log out, requiring re-extraction
 - Use OAuth modes (clacks/clacks-lite) for better security and manageability
 
