@@ -66,10 +66,11 @@ Steps:
   1. Extract the xoxc token and d cookie from your browser. Full extraction
      guide:
        {COOKIE_DOC_URL}
-  2. Log in (prompts for the token and cookie):
+  2. Log in:
        clacks auth login --mode cookie
-     Or pass them directly:
-       clacks auth login --mode cookie --token xoxc-... --cookie <d-value>
+     clacks prompts for the xoxc token and d cookie without echoing them.
+     Do not pass these secrets as command-line flags: argv is visible in
+     shell history, terminal scrollback, and process listings.
   3. Name the context when prompted.
 
 This reuses your user session; clacks acts as you. It stays valid only while

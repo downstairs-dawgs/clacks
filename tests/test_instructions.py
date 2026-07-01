@@ -53,6 +53,13 @@ class TestInstructionsContent(unittest.TestCase):
         self.assertIn("xoxc", text)
         self.assertIn(COOKIE_DOC_URL, text)
 
+    def test_cookie_instructions_do_not_advertise_secret_flags(self):
+        # Secrets must not be shown as argv (shell history / process listings);
+        # the prompt-based flow is the only documented path.
+        text = get_instructions(MODE_COOKIE)
+        self.assertNotIn("--token", text)
+        self.assertNotIn("--cookie", text)
+
     def test_unknown_mode_raises(self):
         with self.assertRaises(ValueError):
             get_instructions("bot")
