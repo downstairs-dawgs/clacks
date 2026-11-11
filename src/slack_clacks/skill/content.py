@@ -215,6 +215,19 @@ uvx --from slack-clacks clacks delete -c "#general" -m "1234567890.123456"
 
 ## Uploading Files and Snippets
 
+Upload documents, images, archives, or other files without converting their contents:
+```bash
+clacks files upload -c "#general" -f report.pdf
+clacks files upload -c "#general" -f image.png
+clacks files upload -c "#general" -f archive.zip
+clacks files upload -f document -t application/pdf
+```
+
+Files use the media type inferred from the source filename. Unknown extensions
+are uploaded as `application/octet-stream`. Override the type with `-t pdf` or
+an explicit media type such as `-t application/pdf`. Known source files retain
+syntax highlighting. Use `-f` for binary files; piped input is text.
+
 Upload a file to a channel:
 ```bash
 uvx --from slack-clacks clacks files upload -c "#general" -f /path/to/file.py

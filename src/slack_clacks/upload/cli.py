@@ -74,7 +74,9 @@ def handle_upload(args: argparse.Namespace) -> None:
             ext = filetype_to_extension(args.filetype) if args.filetype else ".txt"
             filename = f"snippet{ext}"
 
-        filetype = args.filetype or infer_filetype(filename)
+        filetype = args.filetype
+        if not args.file:
+            filetype = filetype or infer_filetype(filename) or "text"
 
         thread_ts = args.thread
 
@@ -172,18 +174,21 @@ def generate_upload_parser() -> argparse.ArgumentParser:
         "-t",
         "--filetype",
         type=str,
-        help="Syntax highlighting type: python, go, javascript, shell, etc.",
+        help=(
+            "File extension or media type (pdf, application/pdf), "
+            "or snippet syntax (python)"
+        ),
     )
     parser.add_argument(
         "--title",
         type=str,
-        help="Snippet title in Slack",
+        help="File or snippet title in Slack",
     )
     parser.add_argument(
         "-m",
         "--comment",
         type=str,
-        help="Initial comment posted with the snippet",
+        help="Initial comment posted with the file or snippet",
     )
     parser.add_argument(
         "--thread",
