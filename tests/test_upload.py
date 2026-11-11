@@ -30,10 +30,10 @@ class TestInferFiletype(unittest.TestCase):
         self.assertEqual(infer_filetype("config.yml"), "yaml")
 
     def test_unknown_extension(self):
-        self.assertEqual(infer_filetype("data.xyz"), "text")
+        self.assertIsNone(infer_filetype("data.xyz"))
 
     def test_no_extension(self):
-        self.assertEqual(infer_filetype("README"), "text")
+        self.assertIsNone(infer_filetype("README"))
 
     def test_dockerfile(self):
         self.assertEqual(infer_filetype("Dockerfile"), "dockerfile")
@@ -103,7 +103,7 @@ class TestHandleUploadWithFile(unittest.TestCase):
                 mock_create_client.return_value,
                 file_path="/tmp/test.py",
                 filename="test.py",
-                filetype="python",
+                filetype=None,
                 title="Test upload",
                 comment="Here is the file",
                 channel_id="C12345",

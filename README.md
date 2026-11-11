@@ -179,6 +179,21 @@ clacks recent
 clacks recent -l 50
 ```
 
+## File uploads
+
+Upload documents, images, archives, or other files without converting their contents:
+```bash
+clacks files upload -c "#general" -f report.pdf
+clacks files upload -c "#general" -f image.png
+clacks files upload -c "#general" -f archive.zip
+clacks files upload -f document -t application/pdf
+```
+
+Files use the media type inferred from the source filename. Unknown extensions
+are uploaded as `application/octet-stream`. Override the type with `-t pdf` or
+an explicit media type such as `-t application/pdf`. Known source files retain
+syntax highlighting. Use `-f` for binary files; piped input is text.
+
 ## Rolodex
 
 Manage aliases for users and channels. Aliases resolve to platform-specific IDs (e.g., Slack user IDs).
